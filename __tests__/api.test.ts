@@ -42,7 +42,7 @@ describe("MindGlow API Suite", () => {
         reflection: "I am extremely worried about my mock test backlog on physics.",
         examType: "JEE Main/Advanced"
       })
-    } as any;
+    } as unknown as NextRequest;
     
     const response = await POST(req);
     expect(response.status).toBe(200);
@@ -57,7 +57,7 @@ describe("MindGlow API Suite", () => {
         reflection: "I am extremely worried about my mock test backlog on physics.",
         examType: "JEE Main/Advanced"
       })
-    } as any;
+    } as unknown as NextRequest;
     
     const response = await POST(req);
     expect(response.status).toBe(400);
@@ -72,7 +72,7 @@ describe("MindGlow API Suite", () => {
         reflection: "",
         examType: "NEET UG"
       })
-    } as any;
+    } as unknown as NextRequest;
     
     const response = await POST(req);
     expect(response.status).toBe(400);

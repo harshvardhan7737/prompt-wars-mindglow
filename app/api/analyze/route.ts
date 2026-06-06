@@ -110,7 +110,7 @@ Provide the response in the specified JSON format.`;
 
     return NextResponse.json(parsedData);
 
-  } catch (error: any) {
+  } catch (error: unknown) {
     // Mask raw stack traces or database errors with a safe user message for security
     console.error("API error during emotion analysis:", error);
     return NextResponse.json(

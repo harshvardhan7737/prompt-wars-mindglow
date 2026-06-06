@@ -107,10 +107,12 @@ export default function Home() {
       const stored = localStorage.getItem(STORAGE_KEY);
       if (stored) {
         const parsed = JSON.parse(stored);
-        setEntries(parsed);
-        if (parsed.length > 0) {
-          setLatestAnalysis(parsed[parsed.length - 1]);
-        }
+        setTimeout(() => {
+          setEntries(parsed);
+          if (parsed.length > 0) {
+            setLatestAnalysis(parsed[parsed.length - 1]);
+          }
+        }, 0);
       }
     } catch (err) {
       console.error("Failed to load local storage entries", err);
@@ -119,6 +121,7 @@ export default function Home() {
 
   // Web Speech API Voice recording handler
   const handleVoiceReflection = () => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
     if (!SpeechRecognition) {
       alert("Browser speech recognition is not supported. Type your reflection below, no cap!");
@@ -140,11 +143,13 @@ export default function Home() {
       setError(null);
     };
 
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     recognition.onresult = (event: any) => {
       const transcript = event.results[0][0].transcript;
       setReflection((prev) => (prev ? prev + " " + transcript : transcript));
     };
 
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     recognition.onerror = (event: any) => {
       console.error("Speech transcription error:", event);
       if (event.error === "not-allowed") {
@@ -173,19 +178,17 @@ export default function Home() {
 
   // Cycling status updates when loading
   useEffect(() => {
-    let interval: NodeJS.Timeout;
-    if (loading) {
-      setLoadingStep(0);
-      interval = setInterval(() => {
-        setLoadingStep((prev) => {
-          if (prev >= loadingMessages.length - 1) {
-            return prev;
-          }
-          return prev + 1;
-        });
-      }, 2000);
-    }
+    if (!loading) return;
+    const interval = setInterval(() => {
+      setLoadingStep((prev) => {
+        if (prev >= loadingMessages.length - 1) {
+          return prev;
+        }
+        return prev + 1;
+      });
+    }, 2000);
     return () => clearInterval(interval);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [loading]);
 
   // Form submit handler
@@ -203,6 +206,7 @@ export default function Home() {
     const examToSubmit = examType === "Other" ? (customExam.trim() || "Competitive Exam") : examType;
 
     setLoading(true);
+    setLoadingStep(0);
     setError(null);
 
     try {
@@ -245,9 +249,10 @@ export default function Home() {
       setMood(null);
       setCustomExam("");
 
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error(err);
-      setError(err.message || "Something went wrong. Let's try that again!");
+      const errorMessage = err instanceof Error ? err.message : "Something went wrong. Let's try that again!";
+      setError(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -286,11 +291,13 @@ export default function Home() {
         });
       }, 1000);
     } else if (breathingTimer === 0 && breathingActive) {
-      setBreathingActive(false);
-      alert("Absolute win! 60-second breathing completed. You are locked-in and ready to slay! 👑");
-      setBreathingTimer(60);
-      setPhaseSeconds(4);
-      setBreathingPhase("Inhale");
+      setTimeout(() => {
+        setBreathingActive(false);
+        alert("Absolute win! 60-second breathing completed. You are locked-in and ready to slay! 👑");
+        setBreathingTimer(60);
+        setPhaseSeconds(4);
+        setBreathingPhase("Inhale");
+      }, 0);
     }
 
     return () => clearTimeout(timer);
@@ -437,9 +444,9 @@ export default function Home() {
         <div className="mb-6 p-4 glass-panel rounded-2xl border-l-4 border-l-purple-500 flex items-start gap-3 shadow-sm">
           <Sparkles className="w-5 h-5 text-purple-600 flex-shrink-0 mt-0.5" />
           <div className="text-xs">
-            <span className="font-extrabold text-purple-700 block uppercase tracking-wider mb-0.5">Today's Daily Reset Quote</span>
+            <span className="font-extrabold text-purple-700 block uppercase tracking-wider mb-0.5">Today&apos;s Daily Reset Quote</span>
             <p className="text-slate-600 italic">
-              &ldquo;Why so serious? It's just an exam! With great mock tests comes great breathing responsibility. All is well, let's slay today!&rdquo; 🕷️🤡
+              &ldquo;Why so serious? It&apos;s just an exam! With great mock tests comes great breathing responsibility. All is well, let&apos;s slay today!&rdquo; 🕷️🤡
             </p>
           </div>
         </div>
