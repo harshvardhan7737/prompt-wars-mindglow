@@ -26,10 +26,11 @@ import {
   Smile,
   Meh,
   Frown,
-  AlertCircle
+  AlertCircle,
+  ArrowLeft,
+  PlusCircle
 } from "lucide-react";
 
-// Local storage key helper
 const STORAGE_KEY = "mindglow_entries_v1";
 
 interface Analysis {
@@ -51,31 +52,41 @@ interface MoodEntry {
   analysis: Analysis;
 }
 
-// Pre-configured mock coping tips / wellness tools
 const WELLNESS_HUB_BOOSTERS = [
   {
-    title: "⚡ Quick Mock Test Recovery",
-    description: "Got lower marks than expected? Take 5 deep breaths, close the test portal, and write down 2 topics you already know perfectly. Rebuild momentum slowly.",
-    category: "Mindset Reset"
+    title: "🕷️ The Peter Parker Principle",
+    description: "With great prep comes great stress-sponsibility! When your spider-sense is tingling from mock test anxiety, take a break. Remember, even Spider-man needed a nap. No cap.",
+    category: "Spidey Wisdom"
   },
   {
-    title: "🧘 Revision Backlog Relief",
-    description: "Break the backlog into 45-minute chunks. Study for 45 mins, then take a hard 15-minute break. Never study continuous hours without getting up.",
-    category: "Study Recovery"
+    title: "🥛 Jal Lijiye (Aap Thak Gaye Honge)",
+    description: "Syllabus backlog looking huge? Don't get emotional damage! Aap thak gaye honge, jal lijiye. Close the book, drink water, take a 5 min walk.",
+    category: "Meme Hydration"
   },
   {
-    title: "💤 Night Before Exam Routine",
-    description: "Close all books by 8:00 PM. Eat a light dinner, listen to soft music, and pack your admit card/pens. A rested brain scores 10% higher than a sleep-deprived one.",
-    category: "Exam Prep"
+    title: "🐕 'This is Fine' Coping Mode",
+    description: "Mock marks lower than expected? Don't sit in the fire saying 'This is fine' FR FR. Pivot your strategy, revise one topic, and get that glow up.",
+    category: "Anti-Delulu"
+  },
+  {
+    title: "🍿 Absolutely Cinema Moment",
+    description: "When you solve a tough integration or UPSC question on the first try and feel like a total GigaChad. Own that win. Slay!",
+    category: "Peak Energy"
   }
 ];
 
 const PRESETS_VIBES = [
-  "I got stuck on a complex math topic and felt like giving up.",
-  "Mock test scores came out today. They were lower than my targets, feeling anxious.",
-  "Parents keep asking about my preparation syllabus and mock ranks. I feel pressured.",
-  "Studying 12 hours a day but still feeling like I will forget everything during the exam.",
-  "Felt energetic today! Completed my daily schedule early and revised physics formulas."
+  "Syllabus backlog is giving major emotional damage, no cap. Arey mujhe chakkar aane laga.",
+  "Mock test marks are not giving main character energy today. Feeling peak delulu.",
+  "Parents' expectation rizz is too high, need to study 14 hours but brain is fried FR FR.",
+  "Felt like a GigaChad today! Solved all mock physics problems on the first try. Slay!"
+];
+
+const POPIT_SLANGS = [
+  "No Cap", "Rizz", "FR FR", "Glow Up", 
+  "Delulu", "Slay", "Sheesh", "Valid", 
+  "Bussin", "GigaChad", "Stonks", "Spidey", 
+  "Cinema", "Jal Lijiye", "Damage", "Chakkar"
 ];
 
 export default function Home() {
@@ -89,24 +100,27 @@ export default function Home() {
   const [customExam, setCustomExam] = useState("");
   const [isListening, setIsListening] = useState(false);
   
+  // Mobile check-in step toggling (if we have a result, show result, otherwise show form)
+  const [isEditing, setIsEditing] = useState(true);
+
   // Loading & Submission State
   const [loading, setLoading] = useState(false);
   const [loadingStep, setLoadingStep] = useState(0);
   const [error, setError] = useState<string | null>(null);
   
-  // Latest Analysis State (from last successful submission)
+  // Latest Analysis State
   const [latestAnalysis, setLatestAnalysis] = useState<MoodEntry | null>(null);
   
-  // Entries History State (loaded from LocalStorage)
+  // Entries History State
   const [entries, setEntries] = useState<MoodEntry[]>([]);
 
   // Guided Breathing State
   const [breathingActive, setBreathingActive] = useState(false);
   const [breathingPhase, setBreathingPhase] = useState<"Inhale" | "Hold" | "Exhale">("Inhale");
-  const [breathingTimer, setBreathingTimer] = useState(60); // 60s exercise
-  const [phaseSeconds, setPhaseSeconds] = useState(4); // 4s per phase
+  const [breathingTimer, setBreathingTimer] = useState(60); 
+  const [phaseSeconds, setPhaseSeconds] = useState(4); 
 
-  // Bubble Pop-it game state (interactive tension release)
+  // Bubble Pop-it game state
   const [bubbles, setBubbles] = useState<boolean[]>(Array(16).fill(false));
 
   // Initialize and load historical entries
@@ -118,6 +132,7 @@ export default function Home() {
         setEntries(parsed);
         if (parsed.length > 0) {
           setLatestAnalysis(parsed[parsed.length - 1]);
+          setIsEditing(false); // If they have an existing entry, show that result on load!
         }
       }
     } catch (err) {
@@ -141,7 +156,7 @@ export default function Home() {
     const recognition = new SpeechRecognition();
     recognition.continuous = false;
     recognition.interimResults = false;
-    recognition.lang = "en-IN"; // Set to Indian English for better local accents transcription
+    recognition.lang = "en-IN"; 
 
     recognition.onstart = () => {
       setIsListening(true);
@@ -156,7 +171,7 @@ export default function Home() {
     recognition.onerror = (event: any) => {
       console.error("Speech transcription error:", event);
       if (event.error === "not-allowed") {
-        setError("Microphone permission denied. Please allow microphone access in your browser settings.");
+        setError("Microphone permission denied. Please allow microphone access in your settings.");
       } else {
         setError("Voice transcription was interrupted. Please try writing instead.");
       }
@@ -170,13 +185,13 @@ export default function Home() {
     recognition.start();
   };
 
-  // Loading animation cycle status list
+  // Gen-Z Loading animation cycle status list
   const loadingMessages = [
-    "Centering your thoughts...",
-    "Analyzing syllabus stress triggers...",
-    "Assessing burnout metrics...",
-    "Querying emotional wellness databases...",
-    "Drafting positive, actionable coping suggestions..."
+    "Initiating Rizz Engine FR FR...",
+    "Evaluating if syllabus is giving main character energy...",
+    "Checking if mock marks caused Emotional Damage...",
+    "Babu Rao says: Aap thak gaye honge, Jal Lijiye...",
+    "Peter Parker is sending some spider-sense vibes..."
   ];
 
   // Cycling status updates when loading
@@ -252,6 +267,7 @@ export default function Home() {
       setReflection("");
       setMood(null);
       setCustomExam("");
+      setIsEditing(false); // Move to results view!
 
     } catch (err: any) {
       console.error(err);
@@ -268,7 +284,11 @@ export default function Home() {
       setEntries(updated);
       localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
       if (latestAnalysis?.id === id) {
-        setLatestAnalysis(updated.length > 0 ? updated[updated.length - 1] : null);
+        const nextLatest = updated.length > 0 ? updated[updated.length - 1] : null;
+        setLatestAnalysis(nextLatest);
+        if (!nextLatest) {
+          setIsEditing(true);
+        }
       }
     }
   };
@@ -295,7 +315,7 @@ export default function Home() {
       }, 1000);
     } else if (breathingTimer === 0 && breathingActive) {
       setBreathingActive(false);
-      alert("Great job! You have completed a 60-second guided breathing cycle. Your heart rate and anxiety should feel reduced.");
+      alert("Great job! You popped your stress out. Heart rate stabilized, you are officially in GigaChad mode now!");
       setBreathingTimer(60);
       setPhaseSeconds(4);
       setBreathingPhase("Inhale");
@@ -334,7 +354,7 @@ export default function Home() {
     if (entries.length === 0) return null;
 
     const moodCounts: Record<string, number> = { Happy: 0, Good: 0, Neutral: 0, Sad: 0, Stressed: 0 };
-    let totalStressScore = 0; // High = 3, Medium = 2, Low = 1
+    let totalStressScore = 0; 
 
     entries.forEach((e) => {
       moodCounts[e.mood] = (moodCounts[e.mood] || 0) + 1;
@@ -369,110 +389,128 @@ export default function Home() {
   }, [entries]);
 
   return (
-    <div className="relative min-h-screen flex flex-col bg-[#090d16] text-[#f8fafc] font-sans antialiased">
-      {/* Background ambient decorative glows */}
-      <div className="ambient-glow top-[10%] left-[-100px]" />
-      <div className="ambient-glow-rose bottom-[20%] right-[-100px]" />
+    <div className="relative min-h-screen flex flex-col bg-[#05010b] text-[#f8fafc] font-sans antialiased">
+      {/* Bright neon background glows */}
+      <div className="ambient-glow-pink top-[10%] right-[5%]" />
+      <div className="ambient-glow-cyan bottom-[15%] left-[5%]" />
 
       {/* HEADER SECTION */}
-      <header className="w-full border-b border-slate-800/80 bg-slate-950/45 backdrop-blur-md sticky top-0 z-50 px-4 py-3">
-        <div className="max-w-6xl mx-auto flex items-center justify-between">
+      <header className="w-full border-b border-pink-500/20 bg-slate-950/75 backdrop-blur-md sticky top-0 z-50 px-4 py-3">
+        <div className="max-w-3xl mx-auto flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-indigo-500 via-purple-500 to-rose-500 flex items-center justify-center shadow-md shadow-indigo-500/20">
-              <BrainCircuit className="w-5 h-5 text-white animate-pulse" />
+            <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-pink-500 via-purple-500 to-cyan-500 flex items-center justify-center shadow-lg shadow-pink-500/20">
+              <BrainCircuit className="w-5.5 h-5.5 text-white animate-pulse" />
             </div>
             <div>
-              <h1 className="text-lg font-bold tracking-tight bg-gradient-to-r from-indigo-200 via-purple-300 to-rose-300 bg-clip-text text-transparent">
-                MindGlow <span className="text-xs text-indigo-400 font-semibold px-1 py-0.5 bg-indigo-500/10 rounded-md border border-indigo-500/20">मनGlow</span>
+              <h1 className="text-md font-extrabold tracking-tight bg-gradient-to-r from-pink-400 via-purple-400 to-cyan-400 bg-clip-text text-transparent">
+                MindGlow <span className="text-[10px] text-pink-300 font-bold px-1.5 py-0.5 bg-pink-500/10 rounded-md border border-pink-500/20 ml-1">मनGlow</span>
               </h1>
-              <p className="text-[10px] text-slate-400 font-medium">Exam Mental Wellness Companion</p>
+              <p className="text-[8px] text-slate-400 font-bold uppercase tracking-wider">Exam Wellness Companion</p>
             </div>
           </div>
 
           {/* Navigation Controls */}
-          <nav className="flex items-center gap-1 sm:gap-2">
+          <nav className="flex items-center gap-1.5">
             <button
-              onClick={() => setActiveTab("checkin")}
+              onClick={() => { setActiveTab("checkin"); }}
               aria-label="Daily Check-in Screen"
-              className={`text-xs px-3 py-1.5 rounded-lg border transition duration-200 flex items-center gap-1.5 ${
+              className={`text-[10px] px-2.5 py-1.5 rounded-lg border transition-all duration-200 flex items-center gap-1 cursor-pointer font-bold ${
                 activeTab === "checkin"
-                  ? "bg-indigo-500/20 text-indigo-300 border-indigo-500/40 font-semibold"
-                  : "bg-slate-900/40 text-slate-400 border-slate-800 hover:bg-slate-800/60 hover:text-slate-200"
+                  ? "bg-gradient-to-r from-pink-500/10 to-purple-500/10 text-pink-300 border-pink-500/40"
+                  : "bg-slate-905 text-slate-400 border-slate-800 hover:text-slate-200"
               }`}
             >
               <Heart className="w-3.5 h-3.5" />
-              <span className="hidden sm:inline">Daily Check-in</span>
+              <span>Check-in</span>
             </button>
             <button
               onClick={() => setActiveTab("history")}
               aria-label="Mood History Screen"
-              className={`text-xs px-3 py-1.5 rounded-lg border transition duration-200 flex items-center gap-1.5 ${
+              className={`text-[10px] px-2.5 py-1.5 rounded-lg border transition-all duration-200 flex items-center gap-1 cursor-pointer font-bold ${
                 activeTab === "history"
-                  ? "bg-indigo-500/20 text-indigo-300 border-indigo-500/40 font-semibold"
-                  : "bg-slate-900/40 text-slate-400 border-slate-800 hover:bg-slate-800/60 hover:text-slate-200"
+                  ? "bg-gradient-to-r from-pink-500/10 to-purple-500/10 text-pink-300 border-pink-500/40"
+                  : "bg-slate-905 text-slate-400 border-slate-800 hover:text-slate-200"
               }`}
             >
               <History className="w-3.5 h-3.5" />
-              <span className="hidden sm:inline">Emotional History</span>
-              {entries.length > 0 && (
-                <span className="bg-indigo-500 text-slate-950 text-[9px] font-bold rounded-full w-4 h-4 flex items-center justify-center">
-                  {entries.length}
-                </span>
-              )}
+              <span>Logs</span>
             </button>
             <button
               onClick={() => setActiveTab("wellness")}
               aria-label="Wellness Center Screen"
-              className={`text-xs px-3 py-1.5 rounded-lg border transition duration-200 flex items-center gap-1.5 ${
+              className={`text-[10px] px-2.5 py-1.5 rounded-lg border transition-all duration-200 flex items-center gap-1 cursor-pointer font-bold ${
                 activeTab === "wellness"
-                  ? "bg-indigo-500/20 text-indigo-300 border-indigo-500/40 font-semibold"
-                  : "bg-slate-900/40 text-slate-400 border-slate-800 hover:bg-slate-800/60 hover:text-slate-200"
+                  ? "bg-gradient-to-r from-pink-500/10 to-purple-500/10 text-pink-300 border-pink-500/40"
+                  : "bg-slate-905 text-slate-400 border-slate-800 hover:text-slate-200"
               }`}
             >
               <Activity className="w-3.5 h-3.5" />
-              <span className="hidden sm:inline">Wellness Hub</span>
+              <span>Wellness</span>
             </button>
           </nav>
         </div>
       </header>
 
-      {/* MAIN CONTAINER */}
-      <main className="flex-1 w-full max-w-6xl mx-auto px-4 py-8 md:py-12">
+      {/* MAIN CONTAINER - Optimized for mobile viewport centering */}
+      <main className="flex-1 w-full max-w-3xl mx-auto px-4 py-6 md:py-10">
 
         {/* ==============================================
             SCREEN 1 & 2: DAILY CHECK-IN & AI INSIGHTS 
             ============================================== */}
         {activeTab === "checkin" && (
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+          <div className="w-full">
             
-            {/* Input Form Dashboard (Left Pane) */}
-            <section className="lg:col-span-5 space-y-6">
-              <div className="glass-panel rounded-2xl p-6 md:p-8 space-y-6">
-                <div className="border-b border-slate-800 pb-3 flex items-center justify-between">
-                  <h2 className="text-lg font-bold text-slate-100 flex items-center gap-2">
-                    <MessageSquare className="w-4.5 h-4.5 text-indigo-400" />
-                    <span>How is your prep going?</span>
+            {/* 1. Loading View */}
+            {loading && (
+              <div className="glass-panel-cyan rounded-2xl p-8 text-center flex flex-col items-center justify-center min-h-[380px]">
+                <div className="relative w-28 h-28 flex items-center justify-center mb-6">
+                  <div className="absolute inset-0 rounded-full border-2 border-dashed border-pink-500/20 animate-spin" style={{ animationDuration: '8s' }} />
+                  <div className="absolute inset-2 rounded-full border border-dashed border-cyan-500/20 animate-spin" style={{ animationDuration: '4s', animationDirection: 'reverse' }} />
+                  <div className="w-14 h-14 rounded-full bg-slate-900/80 border border-slate-800 flex items-center justify-center shadow-lg">
+                    <BrainCircuit className="w-7 h-7 text-pink-400 animate-pulse" />
+                  </div>
+                </div>
+
+                <h3 className="text-sm font-bold text-slate-200 mb-1">Rizzler Engine Cooking</h3>
+                <p className="text-[11px] text-slate-500 mb-6 max-w-xs leading-relaxed">Analyzing exam stress levels & compiling copes...</p>
+
+                <div className="inline-flex items-center gap-2 bg-slate-950/60 border border-slate-850 px-4 py-2 rounded-full text-[11px] text-slate-400 justify-center">
+                  <span className="w-1.5 h-1.5 rounded-full bg-pink-500 animate-ping" />
+                  <span className="font-bold text-slate-300">
+                    {loadingMessages[loadingStep]}
+                  </span>
+                </div>
+              </div>
+            )}
+
+            {/* 2. Check-in Input Form Screen (Renders when editing) */}
+            {!loading && (isEditing || !latestAnalysis) && (
+              <div className="glass-panel rounded-2xl p-5 md:p-7 space-y-5">
+                <div className="border-b border-slate-850 pb-2.5 flex items-center justify-between">
+                  <h2 className="text-sm font-extrabold text-slate-100 flex items-center gap-2">
+                    <MessageSquare className="w-4 h-4 text-pink-400" />
+                    <span>How is your prep rizz today?</span>
                   </h2>
-                  <span className="text-[10px] bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-2 py-0.5 rounded font-medium">
+                  <span className="text-[8px] bg-cyan-500/10 text-cyan-400 border border-cyan-500/20 px-2 py-0.5 rounded font-bold uppercase">
                     AI Enabled
                   </span>
                 </div>
 
-                <form onSubmit={handleSubmit} className="space-y-6">
-                  {/* Select Mood Area */}
-                  <div className="space-y-3">
-                    <label id="mood-label" className="block text-xs font-semibold text-slate-400 uppercase tracking-wider">
-                      Current Exam-Prep Mood
+                <form onSubmit={handleSubmit} className="space-y-5">
+                  {/* Select Mood */}
+                  <div className="space-y-2.5">
+                    <label id="mood-label" className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                      Current Vibe State
                     </label>
-                    <div className="grid grid-cols-5 gap-2" role="group" aria-labelledby="mood-label">
+                    <div className="grid grid-cols-5 gap-1.5" role="group" aria-labelledby="mood-label">
                       {(["Happy", "Good", "Neutral", "Sad", "Stressed"] as const).map((m) => {
                         const isSelected = mood === m;
-                        let colorStyles = "hover:border-indigo-500/50 hover:bg-indigo-500/5 text-slate-400 border-slate-800/80 bg-slate-900/30";
+                        let colorStyles = "hover:border-pink-500/30 hover:bg-pink-500/5 text-slate-400 border-slate-800 bg-slate-900/40";
                         if (isSelected) {
-                          if (m === "Stressed") colorStyles = "bg-rose-500/20 text-rose-300 border-rose-500/60";
-                          else if (m === "Sad") colorStyles = "bg-amber-500/20 text-amber-300 border-amber-500/60";
-                          else if (m === "Neutral") colorStyles = "bg-blue-500/20 text-blue-300 border-blue-500/60";
-                          else colorStyles = "bg-emerald-500/20 text-emerald-300 border-emerald-500/60";
+                          if (m === "Stressed") colorStyles = "bg-rose-500/20 text-rose-300 border-rose-500/50";
+                          else if (m === "Sad") colorStyles = "bg-amber-500/20 text-amber-300 border-amber-500/50";
+                          else if (m === "Neutral") colorStyles = "bg-blue-500/20 text-blue-300 border-blue-500/50";
+                          else colorStyles = "bg-emerald-500/20 text-emerald-300 border-emerald-500/50";
                         }
 
                         return (
@@ -482,7 +520,7 @@ export default function Home() {
                             onClick={() => setMood(m)}
                             aria-label={`Select ${m} mood`}
                             aria-pressed={isSelected}
-                            className={`flex flex-col items-center justify-center p-2.5 rounded-xl border text-center transition duration-200 cursor-pointer ${colorStyles}`}
+                            className={`flex flex-col items-center justify-center py-2.5 rounded-xl border text-center transition duration-205 cursor-pointer ${colorStyles}`}
                           >
                             <span className="text-xl mb-1" role="img" aria-hidden="true">
                               {m === "Happy" && "😊"}
@@ -491,23 +529,29 @@ export default function Home() {
                               {m === "Sad" && "😔"}
                               {m === "Stressed" && "😫"}
                             </span>
-                            <span className="text-[10px] font-bold tracking-tight">{m}</span>
+                            <span className="text-[8px] font-black uppercase tracking-tight">
+                              {m === "Happy" && "Slay"}
+                              {m === "Good" && "Chill"}
+                              {m === "Neutral" && "Meh"}
+                              {m === "Sad" && "Depresso"}
+                              {m === "Stressed" && "Damage"}
+                            </span>
                           </button>
                         );
                       })}
                     </div>
                   </div>
 
-                  {/* Exam selection */}
+                  {/* Target Exam */}
                   <div className="space-y-2">
-                    <label htmlFor="exam-selector" className="block text-xs font-semibold text-slate-400 uppercase tracking-wider">
-                      Target Examination
+                    <label htmlFor="exam-selector" className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                      Target Exam Mission
                     </label>
                     <select
                       id="exam-selector"
                       value={examType}
                       onChange={(e) => setExamType(e.target.value)}
-                      className="w-full bg-slate-900/60 border border-slate-800 focus:border-indigo-500/50 rounded-xl px-3 py-2.5 text-slate-200 text-sm focus:outline-none focus:ring-1 focus:ring-indigo-500/20"
+                      className="w-full bg-slate-900/70 border border-slate-800 focus:border-pink-500/50 rounded-xl px-3 py-2.5 text-slate-200 text-xs focus:outline-none"
                     >
                       <option value="JEE Main/Advanced">JEE Main / Advanced (Engineering)</option>
                       <option value="NEET UG">NEET UG (Medical Entrance)</option>
@@ -523,38 +567,37 @@ export default function Home() {
                         placeholder="Enter exam name (e.g. CUET, NDA)"
                         value={customExam}
                         onChange={(e) => setCustomExam(e.target.value)}
-                        className="w-full mt-2 bg-slate-900/60 border border-slate-800 focus:border-indigo-500/50 rounded-xl px-3.5 py-2 text-slate-200 text-xs focus:outline-none"
+                        className="w-full mt-2 bg-slate-900/60 border border-slate-800 focus:border-pink-500/50 rounded-xl px-3 py-2 text-slate-200 text-xs focus:outline-none"
                       />
                     )}
                   </div>
 
-                  {/* Text / Voice journal input */}
-                  <div className="space-y-3">
+                  {/* Reflection Input */}
+                  <div className="space-y-2.5">
                     <div className="flex justify-between items-center">
-                      <label htmlFor="reflection-input" className="block text-xs font-semibold text-slate-400 uppercase tracking-wider">
-                        Personal Reflection / Thoughts
+                      <label htmlFor="reflection-input" className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                        Mind Dump / Rant Zone
                       </label>
                       
-                      {/* Voice record trigger */}
                       <button
                         type="button"
                         onClick={handleVoiceReflection}
                         aria-label={isListening ? "Stop voice recording" : "Record thoughts with microphone"}
-                        className={`text-[10px] px-2.5 py-1 rounded-lg border transition duration-200 flex items-center gap-1 cursor-pointer ${
+                        className={`text-[8px] px-2.5 py-1 rounded-lg border transition duration-200 flex items-center gap-1 cursor-pointer font-bold uppercase tracking-wide ${
                           isListening
-                            ? "mic-active border-rose-500/40 text-white font-bold"
+                            ? "mic-active-neon border-pink-500/40 text-white"
                             : "bg-slate-900/50 text-slate-400 border-slate-800 hover:text-slate-200 hover:border-slate-700"
                         }`}
                       >
                         {isListening ? (
                           <>
-                            <MicOff className="w-3 h-3 text-white" />
-                            <span>Stop Mic</span>
+                            <MicOff className="w-2.5 h-2.5 text-white" />
+                            <span>Stop Rant</span>
                           </>
                         ) : (
                           <>
-                            <Mic className="w-3 h-3 text-indigo-400" />
-                            <span>Speak Thoughts</span>
+                            <Mic className="w-2.5 h-2.5 text-pink-400" />
+                            <span>Speak Rant</span>
                           </>
                         )}
                       </button>
@@ -564,21 +607,21 @@ export default function Home() {
                       id="reflection-input"
                       value={reflection}
                       onChange={(e) => setReflection(e.target.value)}
-                      placeholder="Write how your preparation is going. E.g., 'Anxious about the physics mechanics formulas and mock results next Monday. Worried that I will run out of study time.'"
-                      rows={4}
-                      className="w-full bg-slate-900/60 border border-slate-800 focus:border-indigo-500/50 rounded-xl px-4 py-3 text-slate-100 text-sm focus:outline-none transition placeholder:text-slate-600 focus:ring-1 focus:ring-indigo-500/30"
+                      placeholder="Write what is stressing you out today. E.g., 'Anxious about syllabus backlogs, parent expectations are too high FR FR.'"
+                      rows={3}
+                      className="w-full bg-slate-900/70 border border-slate-800 focus:border-pink-500/50 rounded-xl px-3 py-2.5 text-slate-100 text-xs focus:outline-none transition placeholder:text-slate-650"
                     />
 
-                    {/* Pre-written templates for students shortcut */}
+                    {/* Presets Shortcuts */}
                     <div className="space-y-1.5">
-                      <span className="text-[10px] text-slate-500 font-medium block">Or click a shortcut concern to test:</span>
-                      <div className="flex flex-col gap-1.5 max-h-36 overflow-y-auto pr-1">
+                      <span className="text-[8px] text-slate-500 font-bold uppercase tracking-wider">Or click a shortcut concern:</span>
+                      <div className="flex flex-col gap-1.5 max-h-32 overflow-y-auto pr-1">
                         {PRESETS_VIBES.map((txt, idx) => (
                           <button
                             key={idx}
                             type="button"
                             onClick={() => setReflection(txt)}
-                            className="text-[10px] text-left px-2 py-1.5 rounded-lg border border-slate-800/80 bg-slate-900/20 text-slate-400 hover:bg-slate-850 hover:text-slate-300 hover:border-slate-700 transition"
+                            className="text-[9px] text-left px-2 py-1.5 rounded-lg border border-slate-800/80 bg-slate-900/20 text-slate-400 hover:bg-slate-850 hover:text-slate-200 hover:border-slate-700 transition"
                           >
                             {txt}
                           </button>
@@ -587,9 +630,8 @@ export default function Home() {
                     </div>
                   </div>
 
-                  {/* Submission triggers */}
                   {error && (
-                    <div className="bg-rose-500/10 border border-rose-500/20 text-rose-400 rounded-xl p-3 flex gap-2 items-start text-xs leading-relaxed" role="alert">
+                    <div className="bg-rose-500/10 border border-rose-500/20 text-rose-400 rounded-xl p-3 flex gap-2 items-start text-xs" role="alert">
                       <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5" />
                       <span>{error}</span>
                     </div>
@@ -598,246 +640,202 @@ export default function Home() {
                   <button
                     type="submit"
                     disabled={loading}
-                    className="w-full bg-gradient-to-r from-indigo-500 via-purple-500 to-rose-500 hover:from-indigo-600 hover:to-rose-600 text-slate-950 font-bold py-3 px-4 rounded-xl flex items-center justify-center gap-2 transition duration-300 cursor-pointer shadow-lg shadow-indigo-500/10 hover:shadow-purple-500/20 disabled:opacity-50 disabled:cursor-not-allowed text-sm active:scale-[0.98]"
+                    className="w-full bg-gradient-to-r from-pink-500 via-purple-500 to-cyan-500 hover:from-pink-600 hover:to-cyan-600 text-slate-950 font-extrabold py-3.5 px-4 rounded-xl flex items-center justify-center gap-2 transition duration-300 cursor-pointer shadow-lg shadow-pink-500/10 hover:shadow-cyan-500/20 disabled:opacity-50 disabled:cursor-not-allowed text-xs uppercase tracking-wider active:scale-[0.98]"
                   >
-                    {loading ? (
-                      <>
-                        <span className="w-4 h-4 border-2 border-slate-950 border-t-transparent rounded-full animate-spin" />
-                        <span>Generating Wellness Profile...</span>
-                      </>
-                    ) : (
-                      <>
-                        <BrainCircuit className="w-4.5 h-4.5 text-slate-950" />
-                        <span className="text-slate-950">Analyze Stress & Get Plan</span>
-                      </>
-                    )}
+                    <BrainCircuit className="w-4 h-4 text-slate-950" />
+                    <span>Analyze Stress & Slay</span>
                   </button>
                 </form>
               </div>
-            </section>
+            )}
 
-            {/* AI Results Presentation Area (Right Pane) */}
-            <section className="lg:col-span-7 space-y-6">
-              
-              {/* Default Empty State */}
-              {!loading && !latestAnalysis && (
-                <div className="glass-panel rounded-2xl p-8 md:p-12 text-center flex flex-col items-center justify-center min-h-[400px]">
-                  <div className="w-16 h-16 rounded-full bg-slate-900 border border-slate-800 flex items-center justify-center mb-6 text-indigo-400/80">
-                    <Heart className="w-8 h-8 animate-pulse text-indigo-400" />
-                  </div>
-                  <h3 className="text-lg font-bold text-slate-200 mb-2">No Stress Check-in Completed</h3>
-                  <p className="text-slate-400 text-xs max-w-sm leading-relaxed mb-6">
-                    MindGlow analyzes your daily study routine, mood, and concerns. Submit a check-in on the left to receive AI assessment, trigger diagnosis, and recovery plans.
-                  </p>
-
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 w-full border-t border-slate-850 pt-6 text-left">
-                    <div className="p-3 bg-slate-900/10 border border-slate-850 rounded-xl">
-                      <span className="text-xs font-bold text-indigo-400 block mb-1">🔍 Trigger Diagnosis</span>
-                      <span className="text-[10px] text-slate-500">Isolate syllabus bottlenecks vs expectation pressure automatically.</span>
-                    </div>
-                    <div className="p-3 bg-slate-900/10 border border-slate-850 rounded-xl">
-                      <span className="text-xs font-bold text-emerald-400 block mb-1">🌿 Personalized Plans</span>
-                      <span className="text-[10px] text-slate-500">Actionable study breaks, routines, and box breathing suggestions.</span>
-                    </div>
-                    <div className="p-3 bg-slate-900/10 border border-slate-850 rounded-xl">
-                      <span className="text-xs font-bold text-rose-400 block mb-1">⏳ Burnout Risk Meter</span>
-                      <span className="text-[10px] text-slate-500">Visual indicators on energy depletion limits.</span>
-                    </div>
-                  </div>
+            {/* 3. AI Wellness Results Screen (Renders when analysis exists and not editing) */}
+            {!loading && !isEditing && latestAnalysis && (
+              <div className="space-y-5">
+                
+                {/* Back Control Button */}
+                <div className="flex items-center justify-between">
+                  <button
+                    onClick={() => setIsEditing(true)}
+                    className="inline-flex items-center gap-1.5 text-xs text-pink-400 hover:text-pink-300 font-bold transition cursor-pointer"
+                  >
+                    <ArrowLeft className="w-4 h-4" />
+                    <span>Back to Check-in</span>
+                  </button>
+                  
+                  <button
+                    onClick={() => { setMood(null); setReflection(""); setIsEditing(true); }}
+                    className="inline-flex items-center gap-1 text-xs text-cyan-400 hover:text-cyan-300 font-bold transition cursor-pointer"
+                  >
+                    <PlusCircle className="w-4 h-4" />
+                    <span>New Check-in</span>
+                  </button>
                 </div>
-              )}
 
-              {/* Loading State with cycling progress messages */}
-              {loading && (
-                <div className="glass-panel rounded-2xl p-10 text-center flex flex-col items-center justify-center min-h-[450px]">
-                  <div className="relative w-32 h-32 flex items-center justify-center mb-8">
-                    <div className="absolute inset-0 rounded-full border-2 border-dashed border-indigo-500/20 animate-spin" style={{ animationDuration: '8s' }} />
-                    <div className="absolute inset-2 rounded-full border border-dashed border-purple-500/20 animate-spin" style={{ animationDuration: '4s', animationDirection: 'reverse' }} />
-                    <div className="w-16 h-16 rounded-full bg-slate-900/80 border border-slate-800 flex items-center justify-center shadow-lg shadow-indigo-500/5">
-                      <BrainCircuit className="w-8 h-8 text-indigo-400 animate-pulse" />
+                {/* Analysis Header Card (Insight & Summary) */}
+                <div className="glass-panel-cyan rounded-2xl p-5 md:p-6 border-l-4 border-l-pink-500 space-y-4">
+                  <div className="flex items-center justify-between border-b border-slate-850 pb-2.5">
+                    <div>
+                      <span className="text-[9px] text-pink-400 font-extrabold uppercase tracking-wider block">AI Rizzler Evaluation</span>
+                      <h3 className="text-[10px] text-slate-400 font-bold flex items-center gap-1 mt-0.5">
+                        <Calendar className="w-3 h-3" />
+                        <span>{new Date(latestAnalysis.timestamp).toLocaleString()} ({latestAnalysis.examType})</span>
+                      </h3>
                     </div>
-                  </div>
-
-                  <h3 className="text-base font-bold text-slate-200 mb-1">MindGlow Advisor Working</h3>
-                  <p className="text-xs text-slate-500 mb-6 max-w-xs leading-relaxed">Evaluating your emotional profile and structuring mental wellness interventions...</p>
-
-                  <div className="inline-flex items-center gap-2 bg-slate-950/60 border border-slate-850 px-4 py-2 rounded-full text-xs text-slate-400 min-w-[280px] justify-center">
-                    <span className="w-2 h-2 rounded-full bg-indigo-500 animate-ping" />
-                    <span className="font-semibold text-slate-300 transition-all duration-300">
-                      {loadingMessages[loadingStep]}
+                    
+                    <span className="text-xl" role="img" aria-label="Checked mood representation">
+                      {latestAnalysis.mood === "Happy" && "😊"}
+                      {latestAnalysis.mood === "Good" && "🙂"}
+                      {latestAnalysis.mood === "Neutral" && "😐"}
+                      {latestAnalysis.mood === "Sad" && "😔"}
+                      {latestAnalysis.mood === "Stressed" && "😫"}
                     </span>
                   </div>
-                </div>
-              )}
 
-              {/* Rendered Results */}
-              {!loading && latestAnalysis && (
-                <div className="space-y-6">
+                  <div className="space-y-1">
+                    <h4 className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Current State</h4>
+                    <p className="text-xs font-bold text-slate-100 leading-relaxed">
+                      &ldquo;{latestAnalysis.analysis.emotionalState}&rdquo;
+                    </p>
+                  </div>
+
+                  <div className="bg-slate-900/60 border border-slate-850 p-3.5 rounded-xl flex gap-2.5 items-start">
+                    <Sparkles className="w-4 h-4 text-purple-400 flex-shrink-0 mt-0.5" />
+                    <p className="text-xs text-slate-300 leading-relaxed font-semibold">
+                      <strong className="text-purple-300">Wellness Rizz:</strong> {latestAnalysis.analysis.insight}
+                    </p>
+                  </div>
+                </div>
+
+                {/* 3 Metrics Row: Stress Level, Burnout Risk, Confidence */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                   
-                  {/* Analysis Header Card (Insight & Summary) */}
-                  <div className="glass-panel rounded-2xl p-6 border-l-4 border-l-indigo-500 space-y-4">
-                    <div className="flex items-center justify-between border-b border-slate-800 pb-3">
-                      <div>
-                        <span className="text-[10px] text-indigo-400 font-bold uppercase tracking-wider block">Latest Evaluation</span>
-                        <h3 className="text-xs text-slate-400 font-semibold flex items-center gap-1.5 mt-0.5">
-                          <Calendar className="w-3.5 h-3.5" />
-                          <span>{new Date(latestAnalysis.timestamp).toLocaleString()} ({latestAnalysis.examType})</span>
-                        </h3>
-                      </div>
-                      
-                      <span className="text-xl" role="img" aria-label="Checked mood representation">
-                        {latestAnalysis.mood === "Happy" && "😊"}
-                        {latestAnalysis.mood === "Good" && "🙂"}
-                        {latestAnalysis.mood === "Neutral" && "😐"}
-                        {latestAnalysis.mood === "Sad" && "😔"}
-                        {latestAnalysis.mood === "Stressed" && "😫"}
+                  {/* Stress Level */}
+                  <div className="glass-panel p-4.5 rounded-xl space-y-1.5">
+                    <span className="text-[9px] text-slate-400 font-bold uppercase tracking-wider block">Stress Status</span>
+                    <div className="flex items-end justify-between">
+                      <span className={`text-sm font-extrabold ${
+                        latestAnalysis.analysis.stressLevel === "High" ? "text-rose-400" :
+                        latestAnalysis.analysis.stressLevel === "Medium" ? "text-amber-400" : "text-emerald-400"
+                      }`}>
+                        {latestAnalysis.analysis.stressLevel === "High" ? "💀 High" :
+                         latestAnalysis.analysis.stressLevel === "Medium" ? "⚡ Medium" : "💅 Low"}
                       </span>
-                    </div>
-
-                    <div className="space-y-1">
-                      <h4 className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Current State</h4>
-                      <p className="text-sm font-semibold text-slate-100 leading-relaxed">
-                        &ldquo;{latestAnalysis.analysis.emotionalState}&rdquo;
-                      </p>
-                    </div>
-
-                    <div className="bg-slate-900/60 border border-slate-850 p-4 rounded-xl flex gap-3 items-start">
-                      <Sparkles className="w-4 h-4 text-purple-400 flex-shrink-0 mt-0.5" />
-                      <p className="text-xs text-slate-300 leading-relaxed font-medium">
-                        <strong className="text-purple-300">Wellness Insight:</strong> {latestAnalysis.analysis.insight}
-                      </p>
+                      
+                      <div className="flex gap-0.5 h-2.5 w-10">
+                        <div className={`w-3 h-full rounded-sm ${
+                          latestAnalysis.analysis.stressLevel !== "Low" ? "bg-amber-500" : "bg-emerald-500"
+                        }`} />
+                        <div className={`w-3 h-full rounded-sm ${
+                          latestAnalysis.analysis.stressLevel === "High" ? "bg-rose-500" : "bg-slate-800"
+                        }`} />
+                        <div className={`w-3 h-full rounded-sm ${
+                          latestAnalysis.analysis.stressLevel === "High" ? "bg-rose-600" : "bg-slate-800"
+                        }`} />
+                      </div>
                     </div>
                   </div>
 
-                  {/* 3 Metrics Row: Stress Level, Burnout Risk, Confidence */}
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    
-                    {/* Stress Level */}
-                    <div className="glass-panel p-5 rounded-xl space-y-2">
-                      <span className="text-[10px] text-slate-400 font-semibold uppercase tracking-wider block">Stress Level</span>
-                      <div className="flex items-end justify-between">
-                        <span className={`text-xl font-bold ${
-                          latestAnalysis.analysis.stressLevel === "High" ? "text-rose-400" :
-                          latestAnalysis.analysis.stressLevel === "Medium" ? "text-amber-400" : "text-emerald-400"
-                        }`}>
-                          {latestAnalysis.analysis.stressLevel}
-                        </span>
-                        
-                        {/* Simple level visual bar */}
-                        <div className="flex gap-0.5 h-3 w-10">
-                          <div className={`w-3 h-full rounded-sm ${
-                            latestAnalysis.analysis.stressLevel !== "Low" ? "bg-amber-500" : "bg-emerald-500"
-                          }`} />
-                          <div className={`w-3 h-full rounded-sm ${
-                            latestAnalysis.analysis.stressLevel === "High" ? "bg-rose-500" : "bg-slate-800"
-                          }`} />
-                          <div className={`w-3 h-full rounded-sm ${
-                            latestAnalysis.analysis.stressLevel === "High" ? "bg-rose-600" : "bg-slate-800"
-                          }`} />
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Burnout Risk */}
-                    <div className="glass-panel p-5 rounded-xl space-y-2">
-                      <span className="text-[10px] text-slate-400 font-semibold uppercase tracking-wider block">Burnout Risk</span>
-                      <div className="flex items-end justify-between">
-                        <span className={`text-xl font-bold ${
-                          latestAnalysis.analysis.burnoutRisk === "High" ? "text-rose-400" :
-                          latestAnalysis.analysis.burnoutRisk === "Medium" ? "text-amber-400" : "text-emerald-400"
-                        }`}>
-                          {latestAnalysis.analysis.burnoutRisk}
-                        </span>
-                        
-                        <div className="flex gap-0.5 h-3 w-10">
-                          <div className={`w-3 h-full rounded-sm ${
-                            latestAnalysis.analysis.burnoutRisk !== "Low" ? "bg-amber-500" : "bg-emerald-500"
-                          }`} />
-                          <div className={`w-3 h-full rounded-sm ${
-                            latestAnalysis.analysis.burnoutRisk === "High" ? "bg-rose-500" : "bg-slate-800"
-                          }`} />
-                          <div className={`w-3 h-full rounded-sm ${
-                            latestAnalysis.analysis.burnoutRisk === "High" ? "bg-rose-600" : "bg-slate-800"
-                          }`} />
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Confidence Level */}
-                    <div className="glass-panel p-5 rounded-xl space-y-2">
-                      <span className="text-[10px] text-slate-400 font-semibold uppercase tracking-wider block">Confidence Level</span>
-                      <div className="flex items-end justify-between">
-                        <span className={`text-xl font-bold ${
-                          latestAnalysis.analysis.confidenceLevel === "High" ? "text-emerald-400" :
-                          latestAnalysis.analysis.confidenceLevel === "Medium" ? "text-amber-400" : "text-rose-400"
-                        }`}>
-                          {latestAnalysis.analysis.confidenceLevel}
-                        </span>
-                        
-                        <div className="flex gap-0.5 h-3 w-10">
-                          <div className={`w-3 h-full rounded-sm ${
-                            latestAnalysis.analysis.confidenceLevel === "Low" ? "bg-rose-500" : "bg-emerald-500"
-                          }`} />
-                          <div className={`w-3 h-full rounded-sm ${
-                            latestAnalysis.analysis.confidenceLevel === "High" ? "bg-emerald-500" : "bg-slate-800"
-                          }`} />
-                          <div className={`w-3 h-full rounded-sm ${
-                            latestAnalysis.analysis.confidenceLevel === "High" ? "bg-emerald-600" : "bg-slate-800"
-                          }`} />
-                        </div>
-                      </div>
-                    </div>
-
-                  </div>
-
-                  {/* Triggers Tag Cloud & Recommendations */}
-                  <div className="grid grid-cols-1 md:grid-cols-12 gap-6">
-                    
-                    {/* Triggers column (4 cols) */}
-                    <div className="glass-panel rounded-xl p-5 md:col-span-5 space-y-3">
-                      <span className="text-[10px] text-slate-400 font-semibold uppercase tracking-wider block border-b border-slate-800 pb-1.5">
-                        Identified Triggers
+                  {/* Burnout Risk */}
+                  <div className="glass-panel p-4.5 rounded-xl space-y-1.5">
+                    <span className="text-[9px] text-slate-400 font-bold uppercase tracking-wider block">Burnout Risk</span>
+                    <div className="flex items-end justify-between">
+                      <span className={`text-sm font-extrabold ${
+                        latestAnalysis.analysis.burnoutRisk === "High" ? "text-rose-400" :
+                        latestAnalysis.analysis.burnoutRisk === "Medium" ? "text-amber-400" : "text-emerald-400"
+                      }`}>
+                        {latestAnalysis.analysis.burnoutRisk === "High" ? "🔥 High" :
+                         latestAnalysis.analysis.burnoutRisk === "Medium" ? "⚠️ Medium" : "😎 Low"}
                       </span>
                       
-                      {latestAnalysis.analysis.triggers.length > 0 ? (
-                        <div className="flex flex-wrap gap-2 pt-1">
-                          {latestAnalysis.analysis.triggers.map((trig, tIdx) => (
-                            <span
-                              key={tIdx}
-                              className="text-xs font-semibold bg-rose-500/10 text-rose-400 border border-rose-500/20 px-2.5 py-1 rounded-lg"
-                            >
-                              ⚠️ {trig}
-                            </span>
-                          ))}
-                        </div>
-                      ) : (
-                        <span className="text-xs text-slate-500 block py-2">No key stress triggers isolated from text.</span>
-                      )}
+                      <div className="flex gap-0.5 h-2.5 w-10">
+                        <div className={`w-3 h-full rounded-sm ${
+                          latestAnalysis.analysis.burnoutRisk !== "Low" ? "bg-amber-500" : "bg-emerald-500"
+                        }`} />
+                        <div className={`w-3 h-full rounded-sm ${
+                          latestAnalysis.analysis.burnoutRisk === "High" ? "bg-rose-500" : "bg-slate-800"
+                        }`} />
+                        <div className={`w-3 h-full rounded-sm ${
+                          latestAnalysis.analysis.burnoutRisk === "High" ? "bg-rose-600" : "bg-slate-800"
+                        }`} />
+                      </div>
                     </div>
+                  </div>
 
-                    {/* Recommendations column (7 cols) */}
-                    <div className="glass-panel rounded-xl p-5 md:col-span-7 space-y-3">
-                      <span className="text-[10px] text-slate-400 font-semibold uppercase tracking-wider block border-b border-slate-800 pb-1.5">
-                        Wellness Support Recommendations
+                  {/* Confidence Level */}
+                  <div className="glass-panel p-4.5 rounded-xl space-y-1.5">
+                    <span className="text-[9px] text-slate-400 font-bold uppercase tracking-wider block">Confidence Rizz</span>
+                    <div className="flex items-end justify-between">
+                      <span className={`text-sm font-extrabold ${
+                        latestAnalysis.analysis.confidenceLevel === "High" ? "text-emerald-400" :
+                        latestAnalysis.analysis.confidenceLevel === "Medium" ? "text-amber-400" : "text-rose-400"
+                      }`}>
+                        {latestAnalysis.analysis.confidenceLevel === "High" ? "👑 High" :
+                         latestAnalysis.analysis.confidenceLevel === "Medium" ? "🔥 Medium" : "📉 Low"}
                       </span>
-
-                      <ul className="space-y-2.5 pt-1">
-                        {latestAnalysis.analysis.recommendations.map((rec, rIdx) => (
-                          <li key={rIdx} className="text-xs text-slate-300 flex items-start gap-2 leading-relaxed">
-                            <CheckCircle2 className="w-3.5 h-3.5 text-indigo-400 flex-shrink-0 mt-0.5" />
-                            <span>{rec}</span>
-                          </li>
-                        ))}
-                      </ul>
+                      
+                      <div className="flex gap-0.5 h-2.5 w-10">
+                        <div className={`w-3 h-full rounded-sm ${
+                          latestAnalysis.analysis.confidenceLevel === "Low" ? "bg-rose-500" : "bg-emerald-500"
+                        }`} />
+                        <div className={`w-3 h-full rounded-sm ${
+                          latestAnalysis.analysis.confidenceLevel === "High" ? "bg-emerald-500" : "bg-slate-800"
+                        }`} />
+                        <div className={`w-3 h-full rounded-sm ${
+                          latestAnalysis.analysis.confidenceLevel === "High" ? "bg-emerald-600" : "bg-slate-800"
+                        }`} />
+                      </div>
                     </div>
-
                   </div>
 
                 </div>
-              )}
 
-            </section>
-            
+                {/* Triggers Tag Cloud & Recommendations Stack */}
+                <div className="grid grid-cols-1 md:grid-cols-12 gap-4">
+                  
+                  {/* Triggers (4 cols) */}
+                  <div className="glass-panel rounded-xl p-5 md:col-span-5 space-y-2.5">
+                    <span className="text-[9px] text-slate-400 font-bold uppercase tracking-wider block border-b border-slate-800 pb-1">
+                      Isolated Triggers
+                    </span>
+                    
+                    {latestAnalysis.analysis.triggers.length > 0 ? (
+                      <div className="flex flex-wrap gap-1.5 pt-1">
+                        {latestAnalysis.analysis.triggers.map((trig, tIdx) => (
+                          <span
+                            key={tIdx}
+                            className="text-[10px] font-bold bg-rose-500/10 text-rose-400 border border-rose-500/20 px-2 py-0.5 rounded-md"
+                          >
+                            💥 {trig}
+                          </span>
+                        ))}
+                      </div>
+                    ) : (
+                      <span className="text-xs text-slate-500 block py-2">No key stress triggers isolated.</span>
+                    )}
+                  </div>
+
+                  {/* Recommendations (7 cols) */}
+                  <div className="glass-panel rounded-xl p-5 md:col-span-7 space-y-2.5">
+                    <span className="text-[9px] text-slate-400 font-bold uppercase tracking-wider block border-b border-slate-800 pb-1">
+                      Recovery Mission Plan
+                    </span>
+
+                    <ul className="space-y-2 pt-1">
+                      {latestAnalysis.analysis.recommendations.map((rec, rIdx) => (
+                        <li key={rIdx} className="text-xs text-slate-300 flex items-start gap-1.5 leading-relaxed font-semibold">
+                          <CheckCircle2 className="w-3.5 h-3.5 text-cyan-400 flex-shrink-0 mt-0.5" />
+                          <span>{rec}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+
+                </div>
+
+              </div>
+            )}
+
           </div>
         )}
 
@@ -845,102 +843,94 @@ export default function Home() {
             SCREEN 3: MOOD HISTORY TIMELINE & STATS
             ============================================== */}
         {activeTab === "history" && (
-          <div className="space-y-8">
+          <div className="space-y-6">
             
             {/* Stats Overview Dashboard */}
             {moodStats ? (
-              <section className="grid grid-cols-1 sm:grid-cols-4 gap-4">
-                <div className="glass-panel p-5 rounded-2xl text-center space-y-1">
-                  <span className="text-[10px] text-slate-400 font-semibold uppercase tracking-wider block">Total Logs</span>
-                  <span className="text-3xl font-extrabold text-indigo-400">{moodStats.total}</span>
+              <section className="grid grid-cols-1 sm:grid-cols-4 gap-3">
+                <div className="glass-panel p-4 rounded-xl text-center space-y-0.5">
+                  <span className="text-[9px] text-slate-400 font-bold uppercase tracking-wider block">Total Rants</span>
+                  <span className="text-2xl font-extrabold text-pink-400">{moodStats.total}</span>
                 </div>
-                <div className="glass-panel p-5 rounded-2xl text-center space-y-1">
-                  <span className="text-[10px] text-slate-400 font-semibold uppercase tracking-wider block">Dominant Mood</span>
-                  <span className="text-3xl font-extrabold text-emerald-400">{moodStats.dominantMood}</span>
+                <div className="glass-panel p-4 rounded-xl text-center space-y-0.5">
+                  <span className="text-[9px] text-slate-400 font-bold uppercase tracking-wider block">Dominant Vibe</span>
+                  <span className="text-2xl font-extrabold text-cyan-400 text-ellipsis overflow-hidden block">{moodStats.dominantMood}</span>
                 </div>
-                <div className="glass-panel p-5 rounded-2xl text-center space-y-1">
-                  <span className="text-[10px] text-slate-400 font-semibold uppercase tracking-wider block">Avg Stress</span>
-                  <span className={`text-3xl font-extrabold ${
+                <div className="glass-panel p-4 rounded-xl text-center space-y-0.5">
+                  <span className="text-[9px] text-slate-400 font-bold uppercase tracking-wider block">Avg Stress State</span>
+                  <span className={`text-2xl font-extrabold block ${
                     moodStats.averageStress === "High" ? "text-rose-400" :
                     moodStats.averageStress === "Medium" ? "text-amber-400" : "text-emerald-400"
-                  }`}>{moodStats.averageStress}</span>
+                  }`}>{moodStats.averageStress === "High" ? "💀 High" :
+                        moodStats.averageStress === "Medium" ? "⚡ Med" : "💅 Low"}</span>
                 </div>
-                <div className="glass-panel p-5 rounded-2xl flex flex-col justify-center items-center gap-1.5">
-                  <span className="text-[10px] text-slate-400 font-semibold uppercase tracking-wider block">Study Resilience</span>
-                  <span className="text-xs font-bold text-purple-300 px-3 py-1 bg-purple-500/10 border border-purple-500/20 rounded-full">
-                    🟢 Stable & Focused
+                <div className="glass-panel p-4 rounded-xl flex flex-col justify-center items-center gap-1">
+                  <span className="text-[9px] text-slate-400 font-bold uppercase tracking-wider block">GigaChad Status</span>
+                  <span className="text-[10px] font-extrabold text-lime-400 px-2 py-0.5 bg-lime-500/10 border border-lime-500/20 rounded-md">
+                    👑 Unstoppable
                   </span>
                 </div>
               </section>
             ) : (
-              <div className="glass-panel p-6 rounded-2xl text-center text-xs text-slate-500">
+              <div className="glass-panel p-5 rounded-xl text-center text-xs text-slate-500">
                 No tracking statistics available. Perform a daily check-in to compile history.
               </div>
             )}
 
             {/* Chronological Timeline */}
-            <section className="glass-panel rounded-2xl p-6 md:p-8 space-y-6">
-              <h2 className="text-lg font-bold text-slate-100 flex items-center gap-2 border-b border-slate-800 pb-3">
-                <History className="w-5 h-5 text-indigo-400" />
-                <span>Historical Wellness Logs</span>
+            <section className="glass-panel rounded-2xl p-5 md:p-6 space-y-4">
+              <h2 className="text-md font-bold text-slate-100 flex items-center gap-2 border-b border-slate-800 pb-2.5">
+                <History className="w-4.5 h-4.5 text-pink-400" />
+                <span>Historical Wellness Timeline</span>
               </h2>
 
               {entries.length > 0 ? (
-                <div className="space-y-6 max-h-[600px] overflow-y-auto pr-1">
+                <div className="space-y-4 max-h-[500px] overflow-y-auto pr-1">
                   {entries.slice().reverse().map((entry, index) => (
                     <div
                       key={entry.id}
-                      className="relative border-l border-slate-800 pl-6 space-y-3 pb-6 last:pb-0"
+                      className="relative border-l border-slate-850 pl-5 space-y-2 pb-5 last:pb-0"
                     >
-                      {/* Timeline dot */}
-                      <div className="absolute left-[-6px] top-1.5 w-3 h-3 rounded-full border-2 border-[#090d16] bg-indigo-500" />
+                      <div className="absolute left-[-4.5px] top-1.5 w-2 h-2 rounded-full border border-[#05010b] bg-pink-500" />
                       
-                      <div className="flex flex-wrap items-center justify-between gap-4 bg-slate-900/30 border border-slate-850 p-4 rounded-xl">
+                      <div className="flex flex-wrap items-center justify-between gap-3 bg-slate-905 border border-slate-850 p-3.5 rounded-xl">
                         
                         <div className="space-y-1">
-                          <div className="flex items-center gap-2.5">
-                            <span className="text-sm font-bold text-slate-200">
-                              {entry.mood === "Happy" && "😊 Happy"}
-                              {entry.mood === "Good" && "🙂 Good"}
-                              {entry.mood === "Neutral" && "😐 Neutral"}
-                              {entry.mood === "Sad" && "😔 Sad"}
-                              {entry.mood === "Stressed" && "😫 Stressed"}
+                          <div className="flex items-center gap-2">
+                            <span className="text-xs font-bold text-slate-200">
+                              {entry.mood === "Happy" && "😊 Slay"}
+                              {entry.mood === "Good" && "🙂 Chill"}
+                              {entry.mood === "Neutral" && "😐 Meh"}
+                              {entry.mood === "Sad" && "😔 Depresso"}
+                              {entry.mood === "Stressed" && "😫 Damage"}
                             </span>
-                            <span className="text-[10px] text-slate-500 bg-slate-950 px-2 py-0.5 rounded border border-slate-800">
+                            <span className="text-[8px] text-pink-300 bg-pink-500/5 px-1.5 py-0.5 rounded border border-pink-500/10 font-bold uppercase">
                               {entry.examType}
                             </span>
                           </div>
                           
-                          <span className="text-[10px] text-slate-500 block font-medium">
+                          <span className="text-[9px] text-slate-500 block font-medium">
                             {new Date(entry.timestamp).toLocaleString()}
                           </span>
 
-                          <p className="text-xs text-slate-400 italic max-w-xl leading-relaxed pt-2">
+                          <p className="text-xs text-slate-400 italic max-w-md leading-relaxed pt-1">
                             &ldquo;{entry.reflection}&rdquo;
                           </p>
-
-                          <div className="pt-2 flex flex-wrap gap-1">
-                            {entry.analysis.triggers.map((t, idx) => (
-                              <span key={idx} className="text-[9px] font-bold bg-rose-500/10 text-rose-400 px-1.5 py-0.5 rounded">
-                                {t}
-                              </span>
-                            ))}
-                          </div>
                         </div>
 
-                        <div className="flex items-center gap-3">
+                        <div className="flex items-center gap-2">
                           <button
-                            onClick={() => setLatestAnalysis(entry)}
-                            className="text-xs px-2.5 py-1.5 bg-indigo-500/10 text-indigo-300 border border-indigo-500/20 rounded-lg hover:bg-indigo-500/20 transition cursor-pointer"
+                            onClick={() => { setLatestAnalysis(entry); setIsEditing(false); setActiveTab("checkin"); }}
+                            className="text-[10px] px-2 py-1 bg-cyan-500/10 text-cyan-300 border border-cyan-500/20 rounded-md hover:bg-cyan-500/20 transition cursor-pointer font-bold"
                           >
-                            Restore Insight
+                            Restore
                           </button>
                           <button
                             onClick={() => handleDeleteEntry(entry.id)}
                             aria-label="Delete entry"
-                            className="text-xs p-1.5 text-slate-500 hover:text-rose-400 transition cursor-pointer"
+                            className="text-xs p-1 text-slate-550 hover:text-rose-450 transition cursor-pointer"
                           >
-                            <Trash2 className="w-4 h-4" />
+                            <Trash2 className="w-3.5 h-3.5" />
                           </button>
                         </div>
 
@@ -949,7 +939,7 @@ export default function Home() {
                   ))}
                 </div>
               ) : (
-                <div className="text-center py-12 text-slate-500 text-sm">
+                <div className="text-center py-10 text-slate-500 text-xs">
                   You haven't logged any wellness reports yet. Go to the Daily Check-in screen to make your first entry!
                 </div>
               )}
@@ -962,79 +952,80 @@ export default function Home() {
             SCREEN 4: INTERACTIVE WELLNESS HUB
             ============================================== */}
         {activeTab === "wellness" && (
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+          <div className="space-y-6">
             
-            {/* Guided Breathing Box (Left / 7 cols) */}
-            <section className="lg:col-span-7 glass-panel rounded-2xl p-6 md:p-8 space-y-6">
-              <div className="border-b border-slate-800 pb-3">
-                <h2 className="text-lg font-bold text-slate-100 flex items-center gap-2">
-                  <Activity className="w-5 h-5 text-indigo-400" />
-                  <span>Interactive Guided Breathing</span>
+            {/* Guided Breathing Box - Full Width for clean interface */}
+            <section className="glass-panel rounded-2xl p-5 md:p-7 space-y-5">
+              <div className="border-b border-slate-800 pb-2.5">
+                <h2 className="text-sm font-bold text-slate-100 flex items-center gap-2">
+                  <Activity className="w-4 h-4 text-cyan-400" />
+                  <span>Gen-Z Guided Breathing Simulator</span>
                 </h2>
                 <p className="text-xs text-slate-400 mt-1">
-                  60-second visual simulator using the standard 4-4-4 box breathing technique to quickly lower stress before exams.
+                  60-second breathing simulator using the 4-4-4 box routine. Calm down your spidey senses.
                 </p>
               </div>
 
-              <div className="flex flex-col items-center justify-center py-8 space-y-8">
+              <div className="flex flex-col items-center justify-center py-6 space-y-6">
                 
                 {/* Simulated Breathing Circle */}
-                <div className="relative w-48 h-48 flex items-center justify-center">
+                <div className="relative w-40 h-40 flex items-center justify-center">
                   
                   {/* Outer pulse wave */}
                   {breathingActive && (
-                    <div className={`absolute inset-0 rounded-full border border-indigo-500/30 transition-all duration-1000 ${
+                    <div className={`absolute inset-0 rounded-full border border-pink-500/30 transition-all duration-1000 ${
                       breathingPhase === "Inhale" ? "scale-100 opacity-80" : 
                       breathingPhase === "Hold" ? "scale-105 opacity-100 animate-ping" : "scale-75 opacity-40"
                     }`} />
                   )}
 
                   {/* Breathing Circle Ring */}
-                  <div className={`w-40 h-40 rounded-full bg-slate-900 border-2 flex flex-col items-center justify-center text-center shadow-lg transition-all duration-1000 ${
+                  <div className={`w-32 h-32 rounded-full bg-slate-900 border-2 flex flex-col items-center justify-center text-center shadow-lg transition-all duration-1000 ${
                     breathingActive
                       ? breathingPhase === "Inhale"
-                        ? "border-emerald-500/60 scale-105 shadow-emerald-500/10"
+                        ? "border-emerald-500/60 scale-105"
                         : breathingPhase === "Hold"
-                        ? "border-amber-500/60 scale-110 shadow-amber-500/10"
-                        : "border-indigo-500/60 scale-95 shadow-indigo-500/10"
+                        ? "border-amber-500/60 scale-110"
+                        : "border-pink-500/60 scale-95"
                       : "border-slate-800 scale-100"
                   }`}>
                     {breathingActive ? (
                       <>
-                        <span className="text-xs font-extrabold text-slate-400 uppercase tracking-widest block mb-1">
-                          {breathingPhase}
+                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-0.5">
+                          {breathingPhase === "Inhale" ? "Inhale" :
+                           breathingPhase === "Hold" ? "Hold" : "Exhale"}
                         </span>
-                        <span className={`text-3xl font-extrabold tracking-tight ${
+                        <span className={`text-2xl font-extrabold tracking-tight ${
                           breathingPhase === "Inhale" ? "text-emerald-400" :
-                          breathingPhase === "Hold" ? "text-amber-400" : "text-indigo-400"
+                          breathingPhase === "Hold" ? "text-amber-400" : "text-pink-400"
                         }`}>
                           {phaseSeconds}s
                         </span>
                       </>
                     ) : (
                       <>
-                        <BrainCircuit className="w-8 h-8 text-slate-600 mb-2" />
-                        <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider block">Ready</span>
+                        <BrainCircuit className="w-7 h-7 text-slate-600 mb-1" />
+                        <span className="text-[9px] font-bold text-slate-500 uppercase tracking-wider block">Chilled</span>
                       </>
                     )}
                   </div>
                 </div>
 
                 {/* Status Bar / Details */}
-                <div className="text-center space-y-2">
-                  <div className="text-sm font-bold text-slate-200">
+                <div className="text-center space-y-1.5">
+                  <div className="text-xs font-bold text-slate-200">
                     {breathingActive ? (
-                      breathingPhase === "Inhale" ? "🌿 Breathe in deep through your nose..." :
-                      breathingPhase === "Hold" ? "⏳ Hold and feel your heartbeat steady..." :
-                      "💨 Slowly exhale through your mouth..."
+                      breathingPhase === "Inhale" ? "🌿 Breathe in deep..." :
+                      breathingPhase === "Hold" ? "⏳ Hold and feel the calm..." :
+                      "💨 Slow release, throw stress out..."
                     ) : (
-                      "Breathe to Calmer Mind"
+                      "Stabilize Your Spider-Senses"
                     )}
                   </div>
                   
                   {breathingActive && (
-                    <div className="text-xs text-indigo-400 font-semibold bg-indigo-500/5 border border-indigo-500/10 px-3 py-1 rounded-full inline-block">
-                      Exercise time remaining: {breathingTimer}s
+                    <div className="text-[9px] text-pink-400 font-bold bg-pink-500/5 border border-pink-500/10 px-2.5 py-1 rounded-md inline-block uppercase">
+                      Timer: {breathingTimer}s remaining
                     </div>
                   )}
                 </div>
@@ -1045,19 +1036,19 @@ export default function Home() {
                     <button
                       onClick={startBreathing}
                       aria-label="Start guided breathing exercise"
-                      className="bg-indigo-500 hover:bg-indigo-600 text-slate-950 font-bold px-5 py-2.5 rounded-xl text-xs transition flex items-center gap-1.5 shadow-md shadow-indigo-500/15 cursor-pointer active:scale-95"
+                      className="bg-gradient-to-r from-pink-500 to-purple-500 hover:from-pink-600 hover:to-purple-600 text-slate-950 font-extrabold px-5 py-2.5 rounded-xl text-xs transition flex items-center gap-1.5 shadow-md cursor-pointer uppercase tracking-wider active:scale-95"
                     >
-                      <Play className="w-3.5 h-3.5 fill-slate-950 text-slate-950" />
+                      <Play className="w-3 h-3 fill-slate-950 text-slate-950" />
                       <span>Start Box Breathing (60s)</span>
                     </button>
                   ) : (
                     <button
                       onClick={stopBreathing}
                       aria-label="Stop guided breathing exercise"
-                      className="bg-rose-500/20 hover:bg-rose-500/30 text-rose-300 border border-rose-500/30 font-bold px-5 py-2.5 rounded-xl text-xs transition flex items-center gap-1.5 cursor-pointer active:scale-95"
+                      className="bg-rose-500/20 hover:bg-rose-500/30 text-rose-300 border border-rose-500/30 font-bold px-4 py-2 rounded-xl text-xs transition flex items-center gap-1.5 cursor-pointer uppercase tracking-wider active:scale-95"
                     >
-                      <Square className="w-3.5 h-3.5 fill-rose-300 text-rose-300" />
-                      <span>Stop Exercise</span>
+                      <Square className="w-3 h-3 fill-rose-300 text-rose-300" />
+                      <span>Abort</span>
                     </button>
                   )}
                 </div>
@@ -1065,72 +1056,64 @@ export default function Home() {
               </div>
             </section>
 
-            {/* Right column: Pop-it Stress Buster & Study Checklists (5 cols) */}
-            <section className="lg:col-span-5 space-y-6">
-              
-              {/* Stress Buster Bubble Game */}
-              <div className="glass-panel rounded-2xl p-5 md:p-6 space-y-4">
-                <div className="flex items-center justify-between border-b border-slate-800 pb-2.5">
-                  <div className="flex items-center gap-2">
-                    <Smile className="w-5 h-5 text-pink-400" />
-                    <h3 className="text-sm font-bold text-slate-100">Stress Pop-It Game</h3>
-                  </div>
+            {/* Bubble Pop-It Grid */}
+            <section className="glass-panel rounded-2xl p-5 space-y-3">
+              <div className="flex items-center justify-between border-b border-slate-800 pb-2">
+                <div className="flex items-center gap-2">
+                  <Smile className="w-4 h-4 text-pink-400" />
+                  <h3 className="text-xs font-bold text-slate-100">Slang Pop-It Solver</h3>
+                </div>
+                <button
+                  onClick={resetBubbles}
+                  className="text-[9px] text-slate-500 hover:text-slate-350 font-bold uppercase cursor-pointer"
+                >
+                  Reset
+                </button>
+              </div>
+              <p className="text-[10px] text-slate-400">Pop slang bubbles to terminate exam pressure. satisfying click resets.</p>
+
+              <div className="grid grid-cols-4 gap-2.5 max-w-sm mx-auto py-2">
+                {bubbles.map((popped, bIdx) => (
                   <button
-                    onClick={resetBubbles}
-                    aria-label="Reset popped bubbles"
-                    className="text-[10px] text-slate-500 hover:text-slate-300 font-semibold cursor-pointer"
+                    key={bIdx}
+                    onClick={() => handlePopBubble(bIdx)}
+                    className={`h-9 text-[8px] font-black rounded-lg border transition duration-200 cursor-pointer active:scale-90 flex items-center justify-center p-1 text-center leading-tight ${
+                      popped
+                        ? "bg-slate-950 border-slate-850 text-slate-700 shadow-inner"
+                        : "bg-gradient-to-tr from-pink-500/20 to-purple-500/20 border-pink-500/40 text-pink-300 hover:border-pink-500"
+                    }`}
                   >
-                    Reset Grid
+                    {popped ? "💥" : POPIT_SLANGS[bIdx]}
                   </button>
-                </div>
-                <p className="text-[11px] text-slate-400">Pop bubbles to release syllabus tension. Simple satisfying micro-interaction.</p>
-
-                {/* Pop it Grid (16 bubbles) */}
-                <div className="grid grid-cols-4 gap-3 max-w-[200px] mx-auto py-2">
-                  {bubbles.map((popped, bIdx) => (
-                    <button
-                      key={bIdx}
-                      onClick={() => handlePopBubble(bIdx)}
-                      aria-label={`Bubble ${bIdx + 1} ${popped ? "popped" : "unpopped"}`}
-                      className={`w-10 h-10 rounded-full border transition duration-200 cursor-pointer active:scale-90 ${
-                        popped
-                          ? "bg-slate-950 border-slate-850 shadow-inner text-slate-700"
-                          : "bg-gradient-to-tr from-pink-500 to-indigo-500 border-pink-400/40 shadow-md shadow-pink-500/10 text-white"
-                      }`}
-                    >
-                      {popped ? "" : "🎈"}
-                    </button>
-                  ))}
-                </div>
+                ))}
               </div>
+            </section>
 
-              {/* Static coping list resources */}
-              <div className="glass-panel rounded-2xl p-5 md:p-6 space-y-4">
-                <h3 className="text-sm font-bold text-slate-100 flex items-center gap-2 border-b border-slate-800 pb-2.5">
-                  <BookOpen className="w-4.5 h-4.5 text-indigo-400" />
-                  <span>Exam Preparation Mindset Cards</span>
-                </h3>
+            {/* Coping Tips */}
+            <section className="glass-panel rounded-2xl p-5 space-y-4">
+              <h3 className="text-xs font-extrabold text-slate-100 flex items-center gap-2 border-b border-slate-800 pb-2">
+                <BookOpen className="w-4 h-4 text-cyan-400" />
+                <span>Wellness & Meme Wisdom</span>
+              </h3>
 
-                <div className="space-y-3.5">
-                  {WELLNESS_HUB_BOOSTERS.map((hub, idx) => (
-                    <div
-                      key={idx}
-                      className="bg-slate-900/30 border border-slate-850 rounded-xl p-3.5 space-y-2 hover:border-slate-800 transition duration-200"
-                    >
-                      <div className="flex items-center justify-between border-b border-slate-800 pb-1">
-                        <span className="text-xs font-bold text-slate-200">{hub.title}</span>
-                        <span className="text-[9px] text-indigo-400 font-bold bg-indigo-500/5 px-2 py-0.5 rounded border border-indigo-500/10">
-                          {hub.category}
-                        </span>
-                      </div>
-                      <p className="text-[11px] text-slate-400 leading-relaxed font-medium">
-                        {hub.description}
-                      </p>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                {WELLNESS_HUB_BOOSTERS.map((hub, idx) => (
+                  <div
+                    key={idx}
+                    className="bg-slate-900/30 border border-slate-850 rounded-xl p-3.5 space-y-1.5"
+                  >
+                    <div className="flex items-center justify-between border-b border-slate-850 pb-1">
+                      <span className="text-[10px] font-bold text-slate-200">{hub.title}</span>
+                      <span className="text-[8px] text-pink-300 font-extrabold bg-pink-500/10 px-1.5 py-0.5 rounded border border-pink-500/20">
+                        {hub.category}
+                      </span>
                     </div>
-                  ))}
-                </div>
+                    <p className="text-[10px] text-slate-400 leading-relaxed font-semibold">
+                      {hub.description}
+                    </p>
+                  </div>
+                ))}
               </div>
-
             </section>
 
           </div>
@@ -1139,12 +1122,12 @@ export default function Home() {
       </main>
 
       {/* FOOTER */}
-      <footer className="w-full border-t border-slate-900 bg-slate-950/20 py-4 text-center mt-auto px-4">
-        <div className="max-w-6xl mx-auto flex flex-col sm:flex-row justify-between items-center gap-2 text-[10px] text-slate-500">
-          <span>&copy; {new Date().getFullYear()} MindGlow. Made with Care for Students.</span>
+      <footer className="w-full border-t border-slate-900 bg-slate-950/40 py-3.5 text-center mt-auto px-4">
+        <div className="max-w-3xl mx-auto flex flex-col sm:flex-row justify-between items-center gap-1.5 text-[9px] text-slate-500">
+          <span>&copy; {new Date().getFullYear()} MindGlow. Slay your exams, no cap.</span>
           <span className="flex items-center gap-1">
-            <Heart className="w-3.5 h-3.5 text-rose-500 fill-rose-500" />
-            Empowering aspirants to beat stress and study healthily.
+            <Heart className="w-3 h-3 text-pink-500 fill-pink-500" />
+            Helping aspirants stay calm FR FR.
           </span>
         </div>
       </footer>

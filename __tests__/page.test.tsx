@@ -8,14 +8,14 @@ describe("MindGlow UI Render Suite", () => {
     
     // Verify title and description are rendered
     expect(screen.getAllByText(/MindGlow/i)[0]).toBeInTheDocument();
-    expect(screen.getByText(/Exam Mental Wellness Companion/i)).toBeInTheDocument();
+    expect(screen.getByText(/Exam Wellness Companion/i)).toBeInTheDocument();
 
     // Verify mood selectors
-    expect(screen.getByText("Happy")).toBeInTheDocument();
-    expect(screen.getByText("Neutral")).toBeInTheDocument();
-    expect(screen.getByText("Stressed")).toBeInTheDocument();
+    expect(screen.getByText("Slay")).toBeInTheDocument();
+    expect(screen.getByText("Meh")).toBeInTheDocument();
+    expect(screen.getByText("Damage")).toBeInTheDocument();
 
     // Verify exam label
-    expect(screen.getByText("Target Examination")).toBeInTheDocument();
+    expect(screen.getByText("Target Exam Mission")).toBeInTheDocument();
   });
 });
