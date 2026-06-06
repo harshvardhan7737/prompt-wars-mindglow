@@ -19,16 +19,21 @@ By analyzing mood vibe checks, text entries, and voice reflections using the Gem
 4. **Glow Log History**: Saved locally in `LocalStorage` with dashboard statistics (Total checks, dominant mood, average stress).
 5. **Interactive Guided Breathing**: Custom 60-second box breathing simulator (4s Inhale, 4s Hold, 4s Exhale) with responsive scaling visual indicator rings.
 6. **Stress Pop-it Game**: Satisfying interactive 16-bubble pop-it grid to quickly release tension from long hours of study.
-7. **Mindset Coping Cards**: Quick recovery strategies for test scores, backlog management, and exam eve sleep habits.
+7. **MindGlow Cassette Walkman (3D Stereo Rain)**: Procedural continuous heavy rain synthesizer featuring three selectable EQ channels:
+   * 🌧️ **Downpour**: Focused on low-frequency deep rumbles and medium sizzles for an indoors-during-storm atmosphere.
+   * ☔ **Shower**: Crisp, high-frequency sizzles representing rain hitting glass windows or pavement.
+   * ⚡ **Monsoon**: Thick rain density, heavy rumbles, and sweeping LFO wind swells.
+   * Fully offline, utilizing parallel lowpass/bandpass/highpass filters on a stereo noise buffer with 380 spatially panned raindrop clicks.
+8. **Mindset Coping Cards**: Quick recovery strategies for test grades, backlog management, and exam eve sleep habits.
 
 ---
 
 ## 🛠️ Tech Stack & Architecture
-* **Frontend**: Next.js 15 (App Router), React 19, Tailwind CSS (v4), TypeScript.
+* **Frontend**: Next.js 16 (App Router), React 19, Tailwind CSS (v4), TypeScript.
 * **Backend**: Next.js API route (`/api/analyze`) handling input validations and payload sanity parsing.
 * **AI Service**: Google Generative AI SDK (`@google/generative-ai`) calling `gemini-2.5-flash`.
 * **Testing**: Jest, JSDOM, `@testing-library/react` (4 unit tests, 100% coverage).
-* **Styling**: Light mode, pastel glassmorphism elements, custom breathing and recording microphone animation keyframes.
+* **Styling**: Light mode, pastel glassmorphism elements, custom breathing and recording microphone animation keyframes. Fully responsive on all viewport sizes (centered and aligned).
 
 ---
 
