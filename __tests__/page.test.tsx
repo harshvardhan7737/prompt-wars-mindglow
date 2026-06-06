@@ -8,14 +8,14 @@ describe("MindGlow UI Render Suite", () => {
     
     // Verify title and description are rendered
     expect(screen.getAllByText(/MindGlow/i)[0]).toBeInTheDocument();
-    expect(screen.getByText(/Exam Wellness Companion/i)).toBeInTheDocument();
+    expect(screen.getByText(/Exam Vibe Check & Wellness Companion/i)).toBeInTheDocument();
 
-    // Verify mood selectors
+    // Verify Gen Z mood selectors
     expect(screen.getByText("Slay")).toBeInTheDocument();
-    expect(screen.getByText("Meh")).toBeInTheDocument();
-    expect(screen.getByText("Damage")).toBeInTheDocument();
+    expect(screen.getByText("Mid")).toBeInTheDocument();
+    expect(screen.getByText("Panik")).toBeInTheDocument();
 
     // Verify exam label
-    expect(screen.getByText("Target Exam Mission")).toBeInTheDocument();
+    expect(screen.getByText("Target Exam Focus")).toBeInTheDocument();
   });
 });
