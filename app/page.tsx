@@ -17,7 +17,10 @@ import {
   CheckCircle2,
   Trash2,
   AlertCircle,
-  Volume2
+  Volume2,
+  AlertOctagon,
+  X,
+  Music
 } from "lucide-react";
 
 // Local storage key helper
@@ -70,6 +73,60 @@ const PRESETS_VIBES = [
   "Vibing today! Locked in and revised all organic chemistry formulas. Slaying! 👑"
 ];
 
+// Panic Memes Database
+const PANIC_MEMES = [
+  {
+    quote: "Control Uday Control...",
+    memeName: "Uday Shetty (Welcome)",
+    translation: "Take a deep breath. Sharma ji ka beta is not worth your sleep. Kalm down!"
+  },
+  {
+    quote: "Arey kehna kya chahte ho?!",
+    memeName: "Silencer (3 Idiots)",
+    translation: "Are exam questions confusing you? Close the test, breathe for 5 mins, and read it again."
+  },
+  {
+    quote: "Chilla chilla ke sabko scheme batade!",
+    memeName: "Raju (Hera Pheri)",
+    translation: "Keep your study strategy quiet. Slay in silence, no cap. Let them wonder how you got that 99%."
+  },
+  {
+    quote: "Arey mujhe chakkar aane laga!",
+    memeName: "Babu Rao (Hera Pheri)",
+    translation: "Feeling dizzier than Babu Rao over equations? Drink water, do 3 box breathing cycles, and reset."
+  },
+  {
+    quote: "Aap chronology samajhiye...",
+    memeName: "Chronology Meme",
+    translation: "First we breathe, then we rest, then we revise. That is the winning chronology, no cap."
+  }
+];
+
+interface SpeechRecognitionResult {
+  transcript: string;
+}
+interface SpeechRecognitionResultList {
+  [index: number]: {
+    [index: number]: SpeechRecognitionResult;
+  };
+}
+interface SpeechRecognitionEvent {
+  results: SpeechRecognitionResultList;
+}
+interface SpeechRecognitionErrorEvent {
+  error: string;
+}
+interface SpeechRecognitionInstance {
+  continuous: boolean;
+  interimResults: boolean;
+  lang: string;
+  onstart: () => void;
+  onresult: (event: SpeechRecognitionEvent) => void;
+  onerror: (event: SpeechRecognitionErrorEvent) => void;
+  onend: () => void;
+  start: () => void;
+}
+
 export default function Home() {
   // Navigation tabs: 'checkin', 'history', 'wellness'
   const [activeTab, setActiveTab] = useState<"checkin" | "history" | "wellness">("checkin");
@@ -101,6 +158,16 @@ export default function Home() {
   // Bubble Pop-it game state (interactive tension release)
   const [bubbles, setBubbles] = useState<boolean[]>(Array(16).fill(false));
 
+  // Audio Context Lofi Synth State
+  const [audioCtx, setAudioCtx] = useState<AudioContext | null>(null);
+  const [lofiPlaying, setLofiPlaying] = useState(false);
+  const [synthNodes, setSynthNodes] = useState<(OscillatorNode | AudioBufferSourceNode)[]>([]);
+
+  // Panic Button State
+  const [panicActive, setPanicActive] = useState(false);
+  const [panicMeme, setPanicMeme] = useState<typeof PANIC_MEMES[0] | null>(null);
+  const [isShaking, setIsShaking] = useState(false);
+
   // Initialize and load historical entries
   useEffect(() => {
     try {
@@ -121,8 +188,9 @@ export default function Home() {
 
   // Web Speech API Voice recording handler
   const handleVoiceReflection = () => {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    const SpeechRecognition =
+      (window as Window & { SpeechRecognition?: new () => SpeechRecognitionInstance }).SpeechRecognition ||
+      (window as Window & { webkitSpeechRecognition?: new () => SpeechRecognitionInstance }).webkitSpeechRecognition;
     if (!SpeechRecognition) {
       alert("Browser speech recognition is not supported. Type your reflection below, no cap!");
       return;
@@ -143,14 +211,12 @@ export default function Home() {
       setError(null);
     };
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    recognition.onresult = (event: any) => {
+    recognition.onresult = (event: SpeechRecognitionEvent) => {
       const transcript = event.results[0][0].transcript;
       setReflection((prev) => (prev ? prev + " " + transcript : transcript));
     };
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    recognition.onerror = (event: any) => {
+    recognition.onerror = (event: SpeechRecognitionErrorEvent) => {
       console.error("Speech transcription error:", event);
       if (event.error === "not-allowed") {
         setError("Microphone permission denied. Allow mic access in your browser settings to speak.");
@@ -326,6 +392,159 @@ export default function Home() {
     const next = [...bubbles];
     next[index] = !next[index];
     setBubbles(next);
+    
+    // Play a tiny synthesis click sound
+    try {
+      const ctx = new (window.AudioContext || (window as Window & { webkitAudioContext?: typeof AudioContext }).webkitAudioContext)();
+      if (ctx.state === "suspended") {
+        ctx.resume();
+      }
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = "sine";
+      osc.frequency.setValueAtTime(600, ctx.currentTime);
+      osc.frequency.exponentialRampToValueAtTime(150, ctx.currentTime + 0.1);
+      gain.gain.setValueAtTime(0.08, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.1);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start();
+      osc.stop(ctx.currentTime + 0.1);
+      setTimeout(() => ctx.close(), 200);
+    } catch {}
+  };
+
+  // Web Audio Lofi Synth Playback Trigger
+  const handleToggleLofi = async () => {
+    if (lofiPlaying) {
+      // Stop synthesis
+      synthNodes.forEach((node) => {
+        try {
+          node.disconnect();
+          node.stop();
+        } catch {}
+      });
+      setSynthNodes([]);
+      if (audioCtx) {
+        audioCtx.close();
+        setAudioCtx(null);
+      }
+      setLofiPlaying(false);
+    } else {
+      try {
+        const ctx = new (window.AudioContext || (window as Window & { webkitAudioContext?: typeof AudioContext }).webkitAudioContext)();
+        if (ctx.state === "suspended") {
+          await ctx.resume();
+        }
+        setAudioCtx(ctx);
+
+        // 1. Vinyl / Rain Static Crackle Node
+        const bufferSize = 2 * ctx.sampleRate;
+        const noiseBuffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
+        const output = noiseBuffer.getChannelData(0);
+        for (let i = 0; i < bufferSize; i++) {
+          output[i] = Math.random() * 2 - 1;
+        }
+        const noiseNode = ctx.createBufferSource();
+        noiseNode.buffer = noiseBuffer;
+        noiseNode.loop = true;
+
+        const noiseFilter = ctx.createBiquadFilter();
+        noiseFilter.type = "bandpass";
+        noiseFilter.frequency.setValueAtTime(900, ctx.currentTime);
+        noiseFilter.Q.setValueAtTime(0.8, ctx.currentTime);
+
+        const noiseGain = ctx.createGain();
+        noiseGain.gain.setValueAtTime(0.015, ctx.currentTime);
+
+        noiseNode.connect(noiseFilter);
+        noiseFilter.connect(noiseGain);
+        noiseGain.connect(ctx.destination);
+        noiseNode.start();
+
+        // 2. Soothing Ambient Lofi Pad
+        // Chord progression: Cmaj7 -> Am7 -> Fmaj7 -> G7sus4
+        const oscillators: OscillatorNode[] = [];
+        const playChord = (notes: number[], duration: number, startTime: number) => {
+          notes.forEach((freq) => {
+            const osc = ctx.createOscillator();
+            const gainNode = ctx.createGain();
+            const filter = ctx.createBiquadFilter();
+
+            osc.type = "triangle";
+            osc.frequency.setValueAtTime(freq, startTime);
+
+            filter.type = "lowpass";
+            filter.frequency.setValueAtTime(260, startTime);
+
+            gainNode.gain.setValueAtTime(0, startTime);
+            gainNode.gain.linearRampToValueAtTime(0.12, startTime + 1.2); // Slow attack
+            gainNode.gain.exponentialRampToValueAtTime(0.0001, startTime + duration - 0.5); // Decay
+
+            osc.connect(filter);
+            filter.connect(gainNode);
+            gainNode.connect(ctx.destination);
+
+            osc.start(startTime);
+            osc.stop(startTime + duration);
+            oscillators.push(osc);
+          });
+        };
+
+        // Loops schedule: 8s per chord
+        const chords = [
+          [130.81, 164.81, 196.00, 246.94], // Cmaj7
+          [110.00, 130.81, 164.81, 196.00], // Am7
+          [174.61, 220.00, 261.63, 329.63], // Fmaj7
+          [146.83, 174.61, 220.00, 293.66], // G7sus4
+        ];
+
+        let time = ctx.currentTime + 0.1;
+        for (let loopIdx = 0; loopIdx < 12; loopIdx++) { // Schedule 96s worth
+          chords.forEach((chord) => {
+            playChord(chord, 8.0, time);
+            time += 8.0;
+          });
+        }
+
+        setSynthNodes([noiseNode, ...oscillators]);
+        setLofiPlaying(true);
+      } catch (err) {
+        console.error("Failed to initialize Web Audio Lofi Synth", err);
+      }
+    }
+  };
+
+  // PANIC BUTTON ACTION
+  const handleTriggerPanic = () => {
+    // 1. Play alert warning sound
+    try {
+      const ctx = new (window.AudioContext || (window as Window & { webkitAudioContext?: typeof AudioContext }).webkitAudioContext)();
+      if (ctx.state === "suspended") {
+        ctx.resume();
+      }
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = "triangle";
+      osc.frequency.setValueAtTime(220, ctx.currentTime);
+      osc.frequency.linearRampToValueAtTime(440, ctx.currentTime + 0.3);
+      gain.gain.setValueAtTime(0.15, ctx.currentTime);
+      gain.gain.linearRampToValueAtTime(0.0001, ctx.currentTime + 0.3);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start();
+      osc.stop(ctx.currentTime + 0.3);
+      setTimeout(() => ctx.close(), 400);
+    } catch {}
+
+    // 2. Trigger screen shake
+    setIsShaking(true);
+    setTimeout(() => setIsShaking(false), 500);
+
+    // 3. Pick random panic meme and open overlay
+    const rand = PANIC_MEMES[Math.floor(Math.random() * PANIC_MEMES.length)];
+    setPanicMeme(rand);
+    setPanicActive(true);
   };
 
   // Calculate statistics for the dashboard
@@ -368,14 +587,24 @@ export default function Home() {
   }, [entries]);
 
   return (
-    <div className="relative min-h-screen flex flex-col bg-[#f8fafc] text-[#0f172a] font-sans antialiased">
+    <div className={`relative min-h-screen flex flex-col bg-[#f8fafc] text-[#0f172a] font-sans antialiased retro-grid ${
+      isShaking ? "shake-screen" : ""
+    }`}>
       {/* Background ambient decorative pastel glows */}
       <div className="ambient-glow top-[10%] left-[-100px]" />
       <div className="ambient-glow-rose bottom-[20%] right-[-100px]" />
 
-      {/* HEADER SECTION (Mobile responsive) */}
+      {/* Floating Collage Stickers (Decorative GenZ icons) */}
+      <div className="hidden lg:block absolute top-[15%] left-[4%] text-4xl select-none opacity-25 pointer-events-none floating-sticker">🤡</div>
+      <div className="hidden lg:block absolute top-[50%] left-[2%] text-4xl select-none opacity-25 pointer-events-none floating-sticker-delayed">💅</div>
+      <div className="hidden lg:block absolute top-[75%] left-[5%] text-4xl select-none opacity-25 pointer-events-none floating-sticker">💀</div>
+      <div className="hidden lg:block absolute top-[20%] right-[3%] text-4xl select-none opacity-25 pointer-events-none floating-sticker-delayed">🧠</div>
+      <div className="hidden lg:block absolute top-[60%] right-[2%] text-4xl select-none opacity-25 pointer-events-none floating-sticker">👑</div>
+      <div className="hidden lg:block absolute top-[80%] right-[4%] text-4xl select-none opacity-25 pointer-events-none floating-sticker-delayed">🧢</div>
+
+      {/* HEADER SECTION (Responsive & collapsible) */}
       <header className="w-full border-b border-slate-200/80 bg-white/70 backdrop-blur-md sticky top-0 z-50 px-4 py-3">
-        <div className="max-w-6xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-3">
+        <div className="max-w-4xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-3">
           
           {/* Logo & Brand */}
           <div className="flex items-center gap-2">
@@ -391,13 +620,13 @@ export default function Home() {
           </div>
 
           {/* Navigation Controls (Mobile first design, wraps nicely) */}
-          <nav className="flex items-center gap-1.5">
+          <div className="flex items-center gap-1.5 flex-wrap justify-center">
             <button
               onClick={() => setActiveTab("checkin")}
               aria-label="Vibe Check Screen"
               className={`text-xs px-3 py-2 rounded-xl border transition duration-200 flex items-center gap-1.5 cursor-pointer ${
                 activeTab === "checkin"
-                  ? "bg-indigo-500 text-white border-indigo-500 font-bold shadow-md shadow-indigo-500/15"
+                  ? "bg-indigo-600 text-white border-indigo-600 font-bold shadow-md shadow-indigo-500/20"
                   : "bg-white/90 text-slate-600 border-slate-200 hover:bg-slate-50 hover:text-slate-900"
               }`}
             >
@@ -409,7 +638,7 @@ export default function Home() {
               aria-label="Glow Log Screen"
               className={`text-xs px-3 py-2 rounded-xl border transition duration-200 flex items-center gap-1.5 cursor-pointer ${
                 activeTab === "history"
-                  ? "bg-indigo-500 text-white border-indigo-500 font-bold shadow-md shadow-indigo-500/15"
+                  ? "bg-indigo-600 text-white border-indigo-600 font-bold shadow-md shadow-indigo-500/20"
                   : "bg-white/90 text-slate-600 border-slate-200 hover:bg-slate-50 hover:text-slate-900"
               }`}
             >
@@ -426,22 +655,22 @@ export default function Home() {
               aria-label="Chill Hub Screen"
               className={`text-xs px-3 py-2 rounded-xl border transition duration-200 flex items-center gap-1.5 cursor-pointer ${
                 activeTab === "wellness"
-                  ? "bg-indigo-500 text-white border-indigo-500 font-bold shadow-md shadow-indigo-500/15"
+                  ? "bg-indigo-600 text-white border-indigo-600 font-bold shadow-md shadow-indigo-500/20"
                   : "bg-white/90 text-slate-600 border-slate-200 hover:bg-slate-50 hover:text-slate-900"
               }`}
             >
               <Activity className="w-3.5 h-3.5" />
               <span>Chill Hub</span>
             </button>
-          </nav>
+          </div>
         </div>
       </header>
 
       {/* MAIN CONTAINER */}
-      <main className="flex-1 w-full max-w-4xl mx-auto px-4 py-6 md:py-10">
+      <main className="flex-1 w-full max-w-4xl mx-auto px-4 py-5 md:py-8">
 
         {/* MOTIVATIONAL BANNER (Quotes & Memes) */}
-        <div className="mb-6 p-4 glass-panel rounded-2xl border-l-4 border-l-purple-500 flex items-start gap-3 shadow-sm">
+        <div className="mb-5 p-4 glass-panel rounded-2xl border-l-4 border-l-purple-500 flex items-start gap-3 shadow-sm">
           <Sparkles className="w-5 h-5 text-purple-600 flex-shrink-0 mt-0.5" />
           <div className="text-xs">
             <span className="font-extrabold text-purple-700 block uppercase tracking-wider mb-0.5">Today&apos;s Daily Reset Quote</span>
@@ -458,15 +687,27 @@ export default function Home() {
           <div className="space-y-6">
             
             {/* Simple Daily Input Box (Single Column for Mobile First ease of use) */}
-            <section className="glass-panel rounded-2xl p-5 md:p-8 space-y-6">
-              <div className="border-b border-slate-200/80 pb-3 flex items-center justify-between">
+            <section className="glass-panel rounded-2xl p-5 md:p-8 space-y-6 shadow-sm">
+              <div className="border-b border-slate-200/80 pb-3 flex items-center justify-between flex-wrap gap-2">
                 <h2 className="text-base font-bold text-slate-800 flex items-center gap-2">
                   <MessageSquare className="w-4.5 h-4.5 text-indigo-500" />
                   <span>Start Your Vibe Check</span>
                 </h2>
-                <span className="text-[10px] bg-indigo-500/10 text-indigo-600 border border-indigo-500/20 px-2.5 py-0.5 rounded-lg font-bold">
-                  Gemini-2.5-Flash
-                </span>
+                
+                {/* Panic & AI Badge Area */}
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={handleTriggerPanic}
+                    className="bg-rose-500 hover:bg-rose-600 text-white font-black text-[10px] px-3 py-1.5 rounded-xl flex items-center gap-1.5 shadow-md shadow-rose-500/15 cursor-pointer animate-bounce"
+                  >
+                    <AlertOctagon className="w-3.5 h-3.5 text-white" />
+                    <span>🚨 PANIK BUTTON</span>
+                  </button>
+                  <span className="text-[10px] bg-indigo-500/10 text-indigo-600 border border-indigo-500/20 px-2.5 py-1.5 rounded-xl font-bold">
+                    Gemini Active
+                  </span>
+                </div>
               </div>
 
               <form onSubmit={handleSubmit} className="space-y-5">
@@ -475,7 +716,7 @@ export default function Home() {
                   <label id="mood-label" className="block text-xs font-bold text-slate-500 uppercase tracking-wider">
                     How are you feeling? (Current Era)
                   </label>
-                  <div className="grid grid-cols-5 gap-2" role="group" aria-labelledby="mood-label">
+                  <div className="grid grid-cols-5 gap-1.5" role="group" aria-labelledby="mood-label">
                     {(["Happy", "Good", "Neutral", "Sad", "Stressed"] as const).map((m) => {
                       const isSelected = mood === m;
                       let colorStyles = "border-slate-200/80 bg-white hover:border-indigo-400 hover:bg-slate-50 text-slate-500";
@@ -495,7 +736,7 @@ export default function Home() {
                           onClick={() => setMood(m)}
                           aria-label={`Mood: ${m}`}
                           aria-pressed={isSelected}
-                          className={`flex flex-col items-center justify-center p-3 rounded-2xl border text-center transition duration-250 cursor-pointer ${colorStyles}`}
+                          className={`flex flex-col items-center justify-center py-2.5 px-1 rounded-2xl border text-center transition duration-250 cursor-pointer ${colorStyles}`}
                         >
                           <span className="text-2xl mb-1" role="img" aria-hidden="true">
                             {m === "Happy" && "👑"}
@@ -504,7 +745,7 @@ export default function Home() {
                             {m === "Sad" && "😔"}
                             {m === "Stressed" && "😫"}
                           </span>
-                          <span className="text-[9px] uppercase tracking-wide font-extrabold">
+                          <span className="text-[9px] uppercase tracking-wide font-extrabold block">
                             {m === "Happy" && "Slay"}
                             {m === "Good" && "Vibe"}
                             {m === "Neutral" && "Mid"}
@@ -572,7 +813,7 @@ export default function Home() {
                         </>
                       ) : (
                         <>
-                          <Mic className="w-3.5 h-3.5 text-indigo-500 animate-pulse" />
+                          <Mic className="w-3.5 h-3.5 text-indigo-500" />
                           <span>Record Voice</span>
                         </>
                       )}
@@ -658,7 +899,7 @@ export default function Home() {
                 
                 {/* Analysis Header Card (Insight & Summary) */}
                 <div className="glass-panel rounded-2xl p-6 border-l-4 border-l-indigo-500 space-y-4 shadow-md">
-                  <div className="flex items-center justify-between border-b border-slate-200 pb-3">
+                  <div className="flex items-center justify-between border-b border-slate-200 pb-3 flex-wrap gap-2">
                     <div>
                       <span className="text-[10px] text-indigo-600 font-extrabold uppercase tracking-wider block">Your Wellness Glow Plan</span>
                       <h3 className="text-xs text-slate-500 font-bold flex items-center gap-1.5 mt-0.5">
@@ -685,10 +926,10 @@ export default function Home() {
 
                   <div className="bg-purple-50 border border-purple-100 p-4 rounded-xl flex gap-3 items-start shadow-inner">
                     <Sparkles className="w-4 h-4 text-purple-600 flex-shrink-0 mt-0.5" />
-                    <p className="text-xs text-purple-900 leading-relaxed font-semibold">
+                    <div className="text-xs text-purple-900 leading-relaxed font-semibold">
                       <strong className="text-purple-700 block uppercase tracking-wider text-[9px] mb-0.5">AI Coping Advice:</strong> 
                       {latestAnalysis.analysis.insight}
-                    </p>
+                    </div>
                   </div>
                 </div>
 
@@ -960,16 +1201,16 @@ export default function Home() {
 
               <div className="flex flex-col items-center justify-center py-6 space-y-6">
                 
-                {/* Visual Circle */}
-                <div className="relative w-44 h-44 flex items-center justify-center">
+                {/* Visual Circle (Responsive sizing) */}
+                <div className="relative w-32 h-32 md:w-44 md:h-44 flex items-center justify-center">
                   {breathingActive && (
-                    <div className={`absolute inset-0 rounded-full border border-indigo-400/40 transition-all duration-1000 ${
+                    <div className={`absolute inset-0 rounded-full border border-indigo-400/45 transition-all duration-1000 ${
                       breathingPhase === "Inhale" ? "scale-100 opacity-70" : 
                       breathingPhase === "Hold" ? "scale-105 opacity-100 animate-ping" : "scale-75 opacity-30"
                     }`} />
                   )}
 
-                  <div className={`w-36 h-36 rounded-full bg-white border-2 flex flex-col items-center justify-center text-center shadow-lg transition-all duration-1000 ${
+                  <div className={`w-28 h-28 md:w-36 md:h-36 rounded-full bg-white border-2 flex flex-col items-center justify-center text-center shadow-lg transition-all duration-1000 ${
                     breathingActive
                       ? breathingPhase === "Inhale"
                         ? "border-emerald-400 scale-105 shadow-emerald-200/50"
@@ -984,7 +1225,7 @@ export default function Home() {
                           {breathingPhase === "Inhale" ? "🧘 Inhale" : 
                            breathingPhase === "Hold" ? "⏳ Hold" : "💨 Exhale"}
                         </span>
-                        <span className={`text-3xl font-extrabold tracking-tight ${
+                        <span className={`text-2xl md:text-3xl font-extrabold tracking-tight ${
                           breathingPhase === "Inhale" ? "text-emerald-600" :
                           breathingPhase === "Hold" ? "text-amber-600" : "text-indigo-600"
                         }`}>
@@ -1045,12 +1286,79 @@ export default function Home() {
               </div>
             </section>
 
+            {/* Interactive Lo-Fi Walkman Web Audio Synthesizer */}
+            <section className="glass-panel rounded-2xl p-5 md:p-7 space-y-4 shadow-sm">
+              <div className="border-b border-slate-200 pb-3">
+                <h2 className="text-base font-bold text-slate-800 flex items-center gap-2">
+                  <Music className="w-4.5 h-4.5 text-purple-600" />
+                  <span>MindGlow Cassette Walkman (Lofi Synth)</span>
+                </h2>
+                <p className="text-xs text-slate-500 mt-1">
+                  Synthesize live ambient lofi beats and vinyl rain crackle directly in your browser. Fully offline, no external audio loading required. Slay your syllabus!
+                </p>
+              </div>
+
+              {/* Cassette Visual Widget */}
+              <div className="max-w-[280px] mx-auto bg-gradient-to-br from-indigo-800 to-purple-900 border-4 border-slate-900 p-4.5 rounded-2xl shadow-xl text-white space-y-4">
+                
+                {/* Cassette Label Header */}
+                <div className="flex justify-between items-center text-[9px] font-bold text-slate-400 uppercase tracking-widest border-b border-slate-700/60 pb-1.5">
+                  <span>Side A - Locked In</span>
+                  <span>Lofi Pad Chord Loop</span>
+                </div>
+
+                {/* Cassette Window (Reels spinning) */}
+                <div className="bg-slate-950 rounded-xl h-14 border border-slate-800 flex items-center justify-around px-5 relative shadow-inner">
+                  {/* Left reel */}
+                  <div className="w-9 h-9 rounded-full bg-slate-900 border border-slate-800 flex items-center justify-center relative">
+                    <div className={`w-3.5 h-3.5 rounded-full border-2 border-dashed border-purple-400 ${
+                      lofiPlaying ? "cassette-spin" : ""
+                    }`} />
+                  </div>
+
+                  {/* Tape visibility bar */}
+                  <div className="absolute w-12 h-1.5 bg-yellow-400/80 rounded-full opacity-35" />
+
+                  {/* Right reel */}
+                  <div className="w-9 h-9 rounded-full bg-slate-900 border border-slate-800 flex items-center justify-center relative">
+                    <div className={`w-3.5 h-3.5 rounded-full border-2 border-dashed border-purple-400 ${
+                      lofiPlaying ? "cassette-spin" : ""
+                    }`} />
+                  </div>
+                </div>
+
+                {/* Control Player */}
+                <div className="flex items-center justify-center gap-3.5 pt-2">
+                  <button
+                    onClick={handleToggleLofi}
+                    className={`px-4.5 py-2 rounded-xl text-xs font-black shadow transition active:scale-95 flex items-center gap-1.5 cursor-pointer ${
+                      lofiPlaying 
+                        ? "bg-rose-500 text-white hover:bg-rose-600" 
+                        : "bg-emerald-400 text-slate-950 hover:bg-emerald-500"
+                    }`}
+                  >
+                    {lofiPlaying ? (
+                      <>
+                        <Square className="w-3.5 h-3.5 text-white fill-white" />
+                        <span>Eject Tape</span>
+                      </>
+                    ) : (
+                      <>
+                        <Play className="w-3.5 h-3.5 text-slate-950 fill-slate-950" />
+                        <span>Insert & Play Tape</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+              </div>
+            </section>
+
             {/* Bubble Pop-It Grid (Tension Release) */}
             <section className="glass-panel rounded-2xl p-5 md:p-6 space-y-4 shadow-sm">
               <div className="flex items-center justify-between border-b border-slate-200 pb-2.5">
                 <div className="flex items-center gap-2">
                   <Sparkles className="w-4.5 h-4.5 text-pink-500" />
-                  <h3 className="text-xs font-bold text-slate-800">Stress Pop-It Game (Satisfying pop in your head)</h3>
+                  <h3 className="text-xs font-bold text-slate-800">Stress Pop-It Game (Satisfying clicks)</h3>
                 </div>
                 <button
                   onClick={resetBubbles}
@@ -1059,7 +1367,7 @@ export default function Home() {
                   Reset Grid
                 </button>
               </div>
-              <p className="text-[11px] text-slate-500">Studying too much? Pop some bubbles, release that tension instantly! 🎈</p>
+              <p className="text-[11px] text-slate-500">Pop bubbles between syllabus milestones to flush out panik. Plays custom synth pops!</p>
 
               <div className="grid grid-cols-4 gap-3.5 max-w-[200px] mx-auto py-2">
                 {bubbles.map((popped, bIdx) => (
@@ -1090,7 +1398,7 @@ export default function Home() {
                 {WELLNESS_HUB_BOOSTERS.map((hub, idx) => (
                   <div
                     key={idx}
-                    className="bg-white/80 border border-slate-200 rounded-xl p-4 space-y-2 shadow-sm hover:border-indigo-300 transition duration-200"
+                    className="bg-white/85 border border-slate-200 rounded-xl p-4 space-y-2 shadow-sm hover:border-indigo-300 transition duration-200"
                   >
                     <div className="flex items-center justify-between border-b border-slate-100 pb-1">
                       <span className="text-[10px] font-bold text-slate-400 uppercase">{hub.category}</span>
@@ -1108,6 +1416,58 @@ export default function Home() {
         )}
 
       </main>
+
+      {/* PANIK OVERLAY MODAL (Satisfying Meme Reset Card) */}
+      {panicActive && panicMeme && (
+        <div className="fixed inset-0 z-50 bg-slate-950/40 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl border-2 border-indigo-400 shadow-2xl p-6 max-w-sm w-full relative space-y-5 animate-in zoom-in-95 duration-200">
+            {/* Close button */}
+            <button
+              onClick={() => setPanicActive(false)}
+              className="absolute top-4 right-4 text-slate-400 hover:text-slate-700 cursor-pointer"
+            >
+              <X className="w-5 h-5" />
+            </button>
+
+            {/* Meme Content Header */}
+            <div className="text-center space-y-2">
+              <div className="w-12 h-12 rounded-full bg-rose-100 flex items-center justify-center mx-auto text-rose-500">
+                <AlertOctagon className="w-6 h-6 animate-pulse" />
+              </div>
+              <span className="text-[10px] text-rose-600 font-extrabold bg-rose-50 border border-rose-200 px-3 py-1 rounded-full uppercase inline-block shadow-inner">
+                Emergency Meme Activated
+              </span>
+            </div>
+
+            {/* Main Quote Card */}
+            <div className="bg-slate-50 border border-slate-200 p-5 rounded-2xl text-center space-y-2 shadow-sm">
+              <h4 className="text-base font-black text-slate-800 leading-snug">
+                &ldquo;{panicMeme.quote}&rdquo;
+              </h4>
+              <span className="text-[10px] font-bold text-slate-400 block">— {panicMeme.memeName}</span>
+            </div>
+
+            {/* Slang comfort translation */}
+            <div className="text-center space-y-4">
+              <p className="text-xs text-slate-600 leading-relaxed font-semibold">
+                {panicMeme.translation}
+              </p>
+              
+              <button
+                onClick={() => {
+                  setPanicActive(false);
+                  setActiveTab("wellness");
+                  startBreathing();
+                }}
+                className="w-full bg-indigo-500 hover:bg-indigo-600 text-white font-extrabold py-2.5 px-4 rounded-xl text-xs shadow-md shadow-indigo-500/15 transition active:scale-95 cursor-pointer flex items-center justify-center gap-1.5"
+              >
+                <Activity className="w-4 h-4" />
+                <span>Go Slay Stress with Box Breathing 🧘</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* FOOTER */}
       <footer className="w-full border-t border-slate-200 bg-white/50 py-4 text-center mt-auto px-4">

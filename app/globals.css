@@ -21,12 +21,20 @@ body {
   overflow-x: hidden;
 }
 
+/* Retro Grid Background Pattern */
+.retro-grid {
+  background-size: 50px 50px;
+  background-image: 
+    linear-gradient(to right, rgba(99, 102, 241, 0.03) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(99, 102, 241, 0.03) 1px, transparent 1px);
+}
+
 /* Light Mode Glassmorphism Panels */
 .glass-panel {
-  background: rgba(255, 255, 255, 0.7);
+  background: rgba(255, 255, 255, 0.75);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
-  border: 1px solid rgba(255, 255, 255, 0.5);
+  border: 1px solid rgba(255, 255, 255, 0.6);
   box-shadow: 0 10px 30px -5px rgba(148, 163, 184, 0.15), 0 4px 12px -2px rgba(148, 163, 184, 0.05);
 }
 
@@ -34,7 +42,7 @@ body {
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 .glass-panel-hover:hover {
-  background: rgba(255, 255, 255, 0.85);
+  background: rgba(255, 255, 255, 0.9);
   border-color: rgba(99, 102, 241, 0.35);
   box-shadow: 0 15px 40px -10px rgba(99, 102, 241, 0.25);
   transform: translateY(-2px);
@@ -88,13 +96,13 @@ body {
   color: white !important;
 }
 
-/* Radial ambient glow background helper (Lighter, soft gradients) */
+/* Radial ambient glow background helper */
 .ambient-glow {
   position: absolute;
   width: 600px;
   height: 600px;
   border-radius: 50%;
-  background: radial-gradient(circle, rgba(99, 102, 241, 0.07) 0%, rgba(99, 102, 241, 0) 70%);
+  background: radial-gradient(circle, rgba(99, 102, 241, 0.06) 0%, rgba(99, 102, 241, 0) 70%);
   z-index: -10;
   pointer-events: none;
 }
@@ -103,7 +111,51 @@ body {
   width: 500px;
   height: 500px;
   border-radius: 50%;
-  background: radial-gradient(circle, rgba(244, 63, 94, 0.06) 0%, rgba(244, 63, 94, 0) 70%);
+  background: radial-gradient(circle, rgba(244, 63, 94, 0.05) 0%, rgba(244, 63, 94, 0) 70%);
   z-index: -10;
   pointer-events: none;
+}
+
+/* Floating animation for background stickers */
+@keyframes floatingEffect {
+  0% { transform: translateY(0px) rotate(0deg); }
+  50% { transform: translateY(-15px) rotate(4deg); }
+  100% { transform: translateY(0px) rotate(0deg); }
+}
+
+.floating-sticker {
+  animation: floatingEffect 6s ease-in-out infinite;
+}
+
+.floating-sticker-delayed {
+  animation: floatingEffect 8s ease-in-out infinite;
+  animation-delay: 2s;
+}
+
+/* Cassette tape spinning wheel animation */
+@keyframes spinWheel {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.cassette-spin {
+  animation: spinWheel 3s linear infinite;
+}
+
+/* Panik button screen vibration effect */
+@keyframes shakeScreen {
+  0%, 100% { transform: translate(0, 0) rotate(0deg); }
+  10% { transform: translate(-2px, -1px) rotate(-0.5deg); }
+  20% { transform: translate(-1px, 2px) rotate(0.5deg); }
+  30% { transform: translate(3px, 1px) rotate(0deg); }
+  40% { transform: translate(1px, -1px) rotate(0.5deg); }
+  50% { transform: translate(-1px, 2px) rotate(-0.5deg); }
+  60% { transform: translate(-3px, 1px) rotate(0.5deg); }
+  70% { transform: translate(2px, 1px) rotate(0deg); }
+  80% { transform: translate(-1px, -1px) rotate(-0.5deg); }
+  90% { transform: translate(1px, 2px) rotate(0.5deg); }
+}
+
+.shake-screen {
+  animation: shakeScreen 0.5s ease-in-out;
 }
