@@ -69,8 +69,10 @@ const PRESETS_VIBES = [
   "Mock test scores went down bad. Panik mode active! 📈",
   "Sharma Ji Ka Beta got 99.9% but my mock backlog is renting space in my head rent-free. 💀",
   "Chilla chilla ke sabko scheme batade! Studying 12 hours but feeling mid. 🤐",
-  "Bro decided to complete 5 chapters in one night. Now down bad and sleep deprived. 😴",
-  "Vibing today! Locked in and revised all organic chemistry formulas. Slaying! 👑"
+  "Bhai kya kar raha hai tu? Daily revision schedule went down bad. 💀",
+  "Iron Man built a suit in a cave with a box of scraps, and I can't even solve this integration question. 😭",
+  "Saala jaldi wahan se hato! organic chemistry formulas are renting space in my head. 🤐",
+  "Vibing today! Locked in and revised all physics formulas. Slaying! 👑"
 ];
 
 // Panic Memes Database
@@ -81,9 +83,34 @@ const PANIC_MEMES = [
     translation: "Take a deep breath. Sharma ji ka beta is not worth your sleep. Kalm down!"
   },
   {
-    quote: "Arey kehna kya chahte ho?!",
-    memeName: "Silencer (3 Idiots)",
-    translation: "Are exam questions confusing you? Close the test, breathe for 5 mins, and read it again."
+    quote: "Bilkul risk nahi lene ka!",
+    memeName: "Babu Rao (Phir Hera Pheri)",
+    translation: "Close the mock test for 5 minutes, drink cold water, and do not panic. Risk-free breathing is valid, no cap!"
+  },
+  {
+    quote: "Bhai kya kar raha hai tu? Mazak chal raha hai kya?",
+    memeName: "Ashneer Grover (Shark Tank)",
+    translation: "Procrastinating 5 hours before exam? Stop the cap. Start box breathing now and get locked-in!"
+  },
+  {
+    quote: "I am Iron Man.",
+    memeName: "Tony Stark (Avengers)",
+    translation: "You are the main character of your own preparation. Breathe in, recharge your arc reactor, and let's cook!"
+  },
+  {
+    quote: "It's not who I am underneath, but what I do that defines me.",
+    memeName: "Bruce Wayne (Batman Begins)",
+    translation: "Your prep errors don't define you. Your next study session does. Time to rise out of the dark cave!"
+  },
+  {
+    quote: "Tell me, do you bleed? You will.",
+    memeName: "Batman (Batman v Superman)",
+    translation: "Exam papers think they can bleed your scores? No cap, you will conquer them with revisions. Slay!"
+  },
+  {
+    quote: "Part of the journey is the end.",
+    memeName: "Iron Man (Avengers: Endgame)",
+    translation: "Every backlog and preparation struggle is just the setup. The final victory is going to be legendary, love you 3000!"
   },
   {
     quote: "Chilla chilla ke sabko scheme batade!",
@@ -127,6 +154,51 @@ interface SpeechRecognitionInstance {
   start: () => void;
 }
 
+// Generate Stereo Noise Buffer (White Noise + spatialized clicks)
+// Defined outside of the React component to satisfy the react-hooks/purity ESLint rules.
+function generateRainBuffer(ctx: AudioContext): AudioBuffer {
+  const sampleRate = ctx.sampleRate;
+  const duration = 5.0; // 5 seconds of variety
+  const bufferSize = sampleRate * duration;
+  const noiseBuffer = ctx.createBuffer(2, bufferSize, sampleRate);
+  const leftChannel = noiseBuffer.getChannelData(0);
+  const rightChannel = noiseBuffer.getChannelData(1);
+
+  for (let i = 0; i < bufferSize; i++) {
+    leftChannel[i] = Math.random() * 2 - 1;
+    rightChannel[i] = Math.random() * 2 - 1;
+  }
+
+  // Add 380 random raindrop clicks (impulse thumps & splats) panned across channels
+  const numDrops = 380;
+  let prevL = 0.0, prevR = 0.0;
+  for (let d = 0; d < numDrops; d++) {
+    const startIdx = Math.floor(Math.random() * bufferSize);
+    const decay = 0.003 + Math.random() * 0.012;
+    const numSamples = Math.floor(decay * sampleRate);
+    const pan = Math.floor(Math.random() * 3); // 0=L, 1=R, 2=Both
+
+    for (let i = 0; i < numSamples; i++) {
+      const idx = (startIdx + i) % bufferSize;
+      const env = Math.exp(-8.5 * i / numSamples);
+      const white = Math.random() * 2 - 1;
+
+      if (pan === 0 || pan === 2) {
+        const hpL = (white - prevL) * 0.5;
+        leftChannel[idx] += hpL * env * 0.22;
+      }
+      if (pan === 1 || pan === 2) {
+        const hpR = (white - prevR) * 0.5;
+        rightChannel[idx] += hpR * env * 0.22;
+      }
+      prevL = white;
+      prevR = white;
+    }
+  }
+
+  return noiseBuffer;
+}
+
 export default function Home() {
   // Navigation tabs: 'checkin', 'history', 'wellness'
   const [activeTab, setActiveTab] = useState<"checkin" | "history" | "wellness">("checkin");
@@ -161,7 +233,15 @@ export default function Home() {
   // Audio Context Lofi Synth State
   const [audioCtx, setAudioCtx] = useState<AudioContext | null>(null);
   const [lofiPlaying, setLofiPlaying] = useState(false);
-  const [synthNodes, setSynthNodes] = useState<(OscillatorNode | AudioBufferSourceNode)[]>([]);
+  const [synthNodes, setSynthNodes] = useState<AudioNode[]>([]);
+  const [rainMode, setRainMode] = useState<"downpour" | "shower" | "monsoon">("downpour");
+
+  // Refs to hold real-time adjustable Web Audio Nodes
+  const rumbleGainRef = React.useRef<GainNode | null>(null);
+  const showerGainRef = React.useRef<GainNode | null>(null);
+  const sizzleGainRef = React.useRef<GainNode | null>(null);
+  const filterRef = React.useRef<BiquadFilterNode | null>(null);
+  const lfoGainRef = React.useRef<GainNode | null>(null);
 
   // Panic Button State
   const [panicActive, setPanicActive] = useState(false);
@@ -414,6 +494,43 @@ export default function Home() {
     } catch {}
   };
 
+  const applyRainModeSettings = (mode: "downpour" | "shower" | "monsoon", ctx: AudioContext) => {
+    const time = ctx.currentTime;
+    
+    // Smooth transitions (0.4s) to avoid clicks or sudden shifts
+    if (rumbleGainRef.current) {
+      const rumbleVal = mode === "downpour" ? 0.08 : mode === "shower" ? 0.015 : 0.11;
+      rumbleGainRef.current.gain.linearRampToValueAtTime(rumbleVal, time + 0.4);
+    }
+    
+    if (showerGainRef.current) {
+      const showerVal = mode === "downpour" ? 0.045 : mode === "shower" ? 0.06 : 0.075;
+      showerGainRef.current.gain.linearRampToValueAtTime(showerVal, time + 0.4);
+    }
+    
+    if (sizzleGainRef.current) {
+      const sizzleVal = mode === "downpour" ? 0.015 : mode === "shower" ? 0.045 : 0.03;
+      sizzleGainRef.current.gain.linearRampToValueAtTime(sizzleVal, time + 0.4);
+    }
+
+    if (filterRef.current) {
+      const freqVal = mode === "downpour" ? 1100 : mode === "shower" ? 1800 : 1300;
+      filterRef.current.frequency.linearRampToValueAtTime(freqVal, time + 0.4);
+    }
+
+    if (lfoGainRef.current) {
+      const lfoVal = mode === "downpour" ? 350 : mode === "shower" ? 150 : 550;
+      lfoGainRef.current.gain.linearRampToValueAtTime(lfoVal, time + 0.4);
+    }
+  };
+
+  const handleChangeRainMode = (mode: "downpour" | "shower" | "monsoon") => {
+    setRainMode(mode);
+    if (audioCtx && lofiPlaying) {
+      applyRainModeSettings(mode, audioCtx);
+    }
+  };
+
   // Web Audio Lofi Synth Playback Trigger
   const handleToggleLofi = async () => {
     if (lofiPlaying) {
@@ -421,7 +538,9 @@ export default function Home() {
       synthNodes.forEach((node) => {
         try {
           node.disconnect();
-          node.stop();
+          if (node instanceof AudioBufferSourceNode || node instanceof OscillatorNode) {
+            node.stop();
+          }
         } catch {}
       });
       setSynthNodes([]);
@@ -429,6 +548,11 @@ export default function Home() {
         audioCtx.close();
         setAudioCtx(null);
       }
+      rumbleGainRef.current = null;
+      showerGainRef.current = null;
+      sizzleGainRef.current = null;
+      filterRef.current = null;
+      lfoGainRef.current = null;
       setLofiPlaying(false);
     } else {
       try {
@@ -438,76 +562,73 @@ export default function Home() {
         }
         setAudioCtx(ctx);
 
-        // 1. Vinyl / Rain Static Crackle Node
-        const bufferSize = 2 * ctx.sampleRate;
-        const noiseBuffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
-        const output = noiseBuffer.getChannelData(0);
-        for (let i = 0; i < bufferSize; i++) {
-          output[i] = Math.random() * 2 - 1;
-        }
-        const noiseNode = ctx.createBufferSource();
-        noiseNode.buffer = noiseBuffer;
-        noiseNode.loop = true;
+        const noiseBuffer = generateRainBuffer(ctx);
+        const noiseSource = ctx.createBufferSource();
+        noiseSource.buffer = noiseBuffer;
+        noiseSource.loop = true;
 
-        const noiseFilter = ctx.createBiquadFilter();
-        noiseFilter.type = "bandpass";
-        noiseFilter.frequency.setValueAtTime(900, ctx.currentTime);
-        noiseFilter.Q.setValueAtTime(0.8, ctx.currentTime);
+        // Lowpass Rumble Path
+        const rumbleFilter = ctx.createBiquadFilter();
+        rumbleFilter.type = "lowpass";
+        rumbleFilter.frequency.setValueAtTime(140, ctx.currentTime);
+        const rumbleGain = ctx.createGain();
+        rumbleGainRef.current = rumbleGain;
 
-        const noiseGain = ctx.createGain();
-        noiseGain.gain.setValueAtTime(0.015, ctx.currentTime);
+        // Bandpass Shower Path
+        const showerFilter = ctx.createBiquadFilter();
+        showerFilter.type = "bandpass";
+        showerFilter.frequency.setValueAtTime(650, ctx.currentTime);
+        showerFilter.Q.setValueAtTime(0.8, ctx.currentTime);
+        const showerGain = ctx.createGain();
+        showerGainRef.current = showerGain;
 
-        noiseNode.connect(noiseFilter);
-        noiseFilter.connect(noiseGain);
-        noiseGain.connect(ctx.destination);
-        noiseNode.start();
+        // Highpass Sizzle Path
+        const sizzleFilter = ctx.createBiquadFilter();
+        sizzleFilter.type = "highpass";
+        sizzleFilter.frequency.setValueAtTime(2800, ctx.currentTime);
+        const sizzleGain = ctx.createGain();
+        sizzleGainRef.current = sizzleGain;
 
-        // 2. Soothing Ambient Lofi Pad
-        // Chord progression: Cmaj7 -> Am7 -> Fmaj7 -> G7sus4
-        const oscillators: OscillatorNode[] = [];
-        const playChord = (notes: number[], duration: number, startTime: number) => {
-          notes.forEach((freq) => {
-            const osc = ctx.createOscillator();
-            const gainNode = ctx.createGain();
-            const filter = ctx.createBiquadFilter();
+        // Master Filter with slow modulating LFO
+        const masterFilter = ctx.createBiquadFilter();
+        masterFilter.type = "lowpass";
+        filterRef.current = masterFilter;
 
-            osc.type = "triangle";
-            osc.frequency.setValueAtTime(freq, startTime);
+        const masterGain = ctx.createGain();
+        masterGain.gain.setValueAtTime(1.0, ctx.currentTime);
 
-            filter.type = "lowpass";
-            filter.frequency.setValueAtTime(260, startTime);
+        // Slow Modulating Wind LFO
+        const lfo = ctx.createOscillator();
+        lfo.frequency.setValueAtTime(0.02, ctx.currentTime);
+        const lfoGain = ctx.createGain();
+        lfoGainRef.current = lfoGain;
 
-            gainNode.gain.setValueAtTime(0, startTime);
-            gainNode.gain.linearRampToValueAtTime(0.12, startTime + 1.2); // Slow attack
-            gainNode.gain.exponentialRampToValueAtTime(0.0001, startTime + duration - 0.5); // Decay
+        lfo.connect(lfoGain);
+        lfoGain.connect(masterFilter.frequency);
 
-            osc.connect(filter);
-            filter.connect(gainNode);
-            gainNode.connect(ctx.destination);
+        // Connections
+        noiseSource.connect(rumbleFilter);
+        rumbleFilter.connect(rumbleGain);
+        rumbleGain.connect(masterFilter);
 
-            osc.start(startTime);
-            osc.stop(startTime + duration);
-            oscillators.push(osc);
-          });
-        };
+        noiseSource.connect(showerFilter);
+        showerFilter.connect(showerGain);
+        showerGain.connect(masterFilter);
 
-        // Loops schedule: 8s per chord
-        const chords = [
-          [130.81, 164.81, 196.00, 246.94], // Cmaj7
-          [110.00, 130.81, 164.81, 196.00], // Am7
-          [174.61, 220.00, 261.63, 329.63], // Fmaj7
-          [146.83, 174.61, 220.00, 293.66], // G7sus4
-        ];
+        noiseSource.connect(sizzleFilter);
+        sizzleFilter.connect(sizzleGain);
+        sizzleGain.connect(masterFilter);
 
-        let time = ctx.currentTime + 0.1;
-        for (let loopIdx = 0; loopIdx < 12; loopIdx++) { // Schedule 96s worth
-          chords.forEach((chord) => {
-            playChord(chord, 8.0, time);
-            time += 8.0;
-          });
-        }
+        masterFilter.connect(masterGain);
+        masterGain.connect(ctx.destination);
 
-        setSynthNodes([noiseNode, ...oscillators]);
+        // Set initial settings based on current state rainMode
+        applyRainModeSettings(rainMode, ctx);
+
+        lfo.start();
+        noiseSource.start();
+
+        setSynthNodes([noiseSource, lfo, rumbleFilter, showerFilter, sizzleFilter, masterFilter, rumbleGain, showerGain, sizzleGain, lfoGain]);
         setLofiPlaying(true);
       } catch (err) {
         console.error("Failed to initialize Web Audio Lofi Synth", err);
@@ -587,7 +708,7 @@ export default function Home() {
   }, [entries]);
 
   return (
-    <div className={`relative min-h-screen flex flex-col bg-[#f8fafc] text-[#0f172a] font-sans antialiased retro-grid ${
+    <div className={`relative min-h-screen flex flex-col bg-[#f8fafc] text-[#0f172a] font-sans antialiased retro-grid overflow-x-hidden ${
       isShaking ? "shake-screen" : ""
     }`}>
       {/* Background ambient decorative pastel glows */}
@@ -595,27 +716,28 @@ export default function Home() {
       <div className="ambient-glow-rose bottom-[20%] right-[-100px]" />
 
       {/* Floating Collage Stickers (Decorative GenZ icons) */}
-      <div className="hidden lg:block absolute top-[15%] left-[4%] text-4xl select-none opacity-25 pointer-events-none floating-sticker">🤡</div>
-      <div className="hidden lg:block absolute top-[50%] left-[2%] text-4xl select-none opacity-25 pointer-events-none floating-sticker-delayed">💅</div>
-      <div className="hidden lg:block absolute top-[75%] left-[5%] text-4xl select-none opacity-25 pointer-events-none floating-sticker">💀</div>
-      <div className="hidden lg:block absolute top-[20%] right-[3%] text-4xl select-none opacity-25 pointer-events-none floating-sticker-delayed">🧠</div>
-      <div className="hidden lg:block absolute top-[60%] right-[2%] text-4xl select-none opacity-25 pointer-events-none floating-sticker">👑</div>
-      <div className="hidden lg:block absolute top-[80%] right-[4%] text-4xl select-none opacity-25 pointer-events-none floating-sticker-delayed">🧢</div>
+      <div className="absolute top-[15%] left-[2%] text-2xl md:text-4xl select-none opacity-15 md:opacity-25 pointer-events-none floating-sticker">🤡</div>
+      <div className="absolute top-[50%] left-[1%] text-2xl md:text-4xl select-none opacity-15 md:opacity-25 pointer-events-none floating-sticker-delayed">💅</div>
+      <div className="absolute top-[75%] left-[2%] text-2xl md:text-4xl select-none opacity-15 md:opacity-25 pointer-events-none floating-sticker">💀</div>
+      <div className="absolute top-[20%] right-[1%] text-2xl md:text-4xl select-none opacity-15 md:opacity-25 pointer-events-none floating-sticker-delayed">🧠</div>
+      <div className="absolute top-[60%] right-[1%] text-2xl md:text-4xl select-none opacity-15 md:opacity-25 pointer-events-none floating-sticker">👑</div>
+      <div className="absolute top-[80%] right-[2%] text-2xl md:text-4xl select-none opacity-15 md:opacity-25 pointer-events-none floating-sticker-delayed">🧢</div>
 
       {/* HEADER SECTION (Responsive & collapsible) */}
       <header className="w-full border-b border-slate-200/80 bg-white/70 backdrop-blur-md sticky top-0 z-50 px-4 py-3">
         <div className="max-w-4xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-3">
           
           {/* Logo & Brand */}
-          <div className="flex items-center gap-2">
-            <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-indigo-500 via-purple-500 to-rose-400 flex items-center justify-center shadow-md shadow-indigo-500/20">
-              <BrainCircuit className="w-5 h-5 text-white" />
+          <div className="flex items-center gap-3.5 sm:gap-4 w-full sm:w-auto justify-start">
+            <div className="w-16 h-16 sm:w-18 sm:h-18 rounded-2xl bg-gradient-to-tr from-indigo-500 via-purple-500 to-rose-400 flex items-center justify-center shadow-lg shadow-indigo-500/25 transition-all duration-300 hover:scale-105 flex-shrink-0">
+              <BrainCircuit className="w-8 h-8 sm:w-9 sm:h-9 text-white" />
             </div>
-            <div className="text-center sm:text-left">
-              <h1 className="text-lg font-bold tracking-tight bg-gradient-to-r from-indigo-600 via-purple-600 to-rose-500 bg-clip-text text-transparent">
-                MindGlow <span className="text-[10px] text-indigo-600 font-bold px-1.5 py-0.5 bg-indigo-500/10 rounded-md border border-indigo-500/20">मनGlow</span>
+            <div className="text-left">
+              <h1 className="text-3xl sm:text-4xl font-black tracking-tight bg-gradient-to-r from-indigo-600 via-purple-600 to-rose-500 bg-clip-text text-transparent flex flex-row items-center justify-start gap-2 leading-none">
+                <span>MindGlow</span>
+                <span className="text-[11px] sm:text-xs text-indigo-600 font-bold px-2 py-0.5 bg-indigo-500/10 rounded-md border border-indigo-500/20">मनGlow</span>
               </h1>
-              <p className="text-[9px] text-slate-500 font-semibold tracking-wider uppercase">Exam Vibe Check & Wellness Companion</p>
+              <p className="text-[9px] sm:text-[10px] text-slate-500 font-extrabold tracking-widest uppercase mt-1">Exam Vibe Check & Wellness Companion</p>
             </div>
           </div>
 
@@ -1291,10 +1413,10 @@ export default function Home() {
               <div className="border-b border-slate-200 pb-3">
                 <h2 className="text-base font-bold text-slate-800 flex items-center gap-2">
                   <Music className="w-4.5 h-4.5 text-purple-600" />
-                  <span>MindGlow Cassette Walkman (Lofi Synth)</span>
+                  <span>MindGlow Cassette Walkman (Continuous Rain)</span>
                 </h2>
                 <p className="text-xs text-slate-500 mt-1">
-                  Synthesize live ambient lofi beats and vinyl rain crackle directly in your browser. Fully offline, no external audio loading required. Slay your syllabus!
+                  Synthesize a live, soothing, continuous rain shower with wind gusts and pitter-patter raindrops directly in your browser. Fully offline, no external audio files required. Slay your syllabus in calm!
                 </p>
               </div>
 
@@ -1303,8 +1425,8 @@ export default function Home() {
                 
                 {/* Cassette Label Header */}
                 <div className="flex justify-between items-center text-[9px] font-bold text-slate-400 uppercase tracking-widest border-b border-slate-700/60 pb-1.5">
-                  <span>Side A - Locked In</span>
-                  <span>Lofi Pad Chord Loop</span>
+                  <span>Side A - Calmed In</span>
+                  <span>Continuous Rain ASMR</span>
                 </div>
 
                 {/* Cassette Window (Reels spinning) */}
@@ -1326,9 +1448,34 @@ export default function Home() {
                     }`} />
                   </div>
                 </div>
+                {/* Rain Preset Mode Selector (Real-Time Audio Channel Equalizer) */}
+                <div className="space-y-1.5 pt-1 border-t border-slate-700/60">
+                  <span className="text-[8px] font-bold text-slate-400 uppercase tracking-wider block text-center">Select Heavy Rain Vibe:</span>
+                  <div className="grid grid-cols-3 gap-1">
+                    {(["downpour", "shower", "monsoon"] as const).map((m) => {
+                      const isActive = rainMode === m;
+                      return (
+                        <button
+                          key={m}
+                          type="button"
+                          onClick={() => handleChangeRainMode(m)}
+                          className={`text-[8px] font-black py-1.5 px-0.5 rounded-lg border transition duration-150 cursor-pointer text-center uppercase tracking-wide leading-none ${
+                            isActive
+                              ? "bg-indigo-500 border-indigo-400 text-white shadow-md shadow-indigo-500/20"
+                              : "bg-slate-950/50 border-slate-800 text-slate-400 hover:text-white hover:bg-slate-900"
+                          }`}
+                        >
+                          {m === "downpour" && "🌧️ Downpour"}
+                          {m === "shower" && "☔ Shower"}
+                          {m === "monsoon" && "⚡ Monsoon"}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
 
                 {/* Control Player */}
-                <div className="flex items-center justify-center gap-3.5 pt-2">
+                <div className="flex items-center justify-center gap-3.5 pt-1">
                   <button
                     onClick={handleToggleLofi}
                     className={`px-4.5 py-2 rounded-xl text-xs font-black shadow transition active:scale-95 flex items-center gap-1.5 cursor-pointer ${
